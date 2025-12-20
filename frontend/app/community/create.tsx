@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, AppHeader, PrimaryButton } from '../../../src/components';
-import { colors, spacing, typography, radius } from '../../../src/theme';
+import { ScreenWrapper, AppHeader, PrimaryButton } from '../../src/components';
+import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CreatePostScreen() {
