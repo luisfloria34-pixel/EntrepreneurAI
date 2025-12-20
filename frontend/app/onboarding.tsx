@@ -1,12 +1,74 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, PrimaryButton, SecondaryButton } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useOnboarding } from '../src/context/OnboardingContext';
+import { surveyQuestions } from '../src/data/surveyData';
 
 export default function OnboardingStartScreen() {
   const router = useRouter();
+  const { currentStep, isCompleted, isLoading, answers } = useOnboarding();
+
+  // Check if user has partial progress
+  const hasProgress = Object.keys(answers).length > 0 && currentStep > 1;
+  const progressPercent = Math.round((Object.keys(answers).length / surveyQuestions.length) * 100);
+
+  const handleStartSurvey = () => {
+    if (hasProgress && currentStep <= surveyQuestions.length) {
+      // Resume from last step
+      router.push(`/survey/${currentStep}`);
+    } else {
+      // Start fresh
+      router.push('/survey/1');
+    }
+  };
+
+  const handleStartFresh = () => {
+    router.push('/survey/1');
+  };
+
+  if (isLoading) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Laden...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  // If already completed, show option to view profile or restart
+  if (isCompleted) {
+    return (
+      <ScreenWrapper scroll>
+        <View style={styles.content}>
+          <View style={styles.hero}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="checkmark-circle" size={56} color={colors.semantic.success} />
+            </View>
+            <Text style={styles.title}>Du hast bereits ein Profil!</Text>
+            <Text style={styles.subtitle}>
+              Du kannst direkt zum Dashboard gehen oder das Survey neu machen.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.actions}>
+          <PrimaryButton
+            title="Zum Dashboard"
+            onPress={() => router.replace('/(tabs)/dashboard')}
+          />
+          <SecondaryButton
+            title="Survey neu starten"
+            onPress={handleStartFresh}
+            style={styles.secondaryButton}
+          />
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper scroll>
@@ -21,6 +83,25 @@ export default function OnboardingStartScreen() {
             Beantworte 13 kurze Fragen, damit wir deinen{"\n"}persönlichen Hustle-Plan erstellen können.
           </Text>
         </View>
+
+        {/* Resume Progress Card */}
+        {hasProgress && (
+          <View style={styles.resumeCard}>
+            <View style={styles.resumeHeader}>
+              <Ionicons name="bookmark" size={24} color={colors.accent.primary} />
+              <Text style={styles.resumeTitle}>Fortschritt gespeichert</Text>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+              </View>
+              <Text style={styles.progressText}>{progressPercent}% abgeschlossen</Text>
+            </View>
+            <Text style={styles.resumeText}>
+              Du warst bei Frage {currentStep} von {surveyQuestions.length}
+            </Text>
+          </View>
+        )}
 
         {/* Features */}
         <View style={styles.features}>
@@ -56,9 +137,16 @@ export default function OnboardingStartScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         <PrimaryButton
-          title="Survey starten"
-          onPress={() => router.push('/survey/1')}
+          title={hasProgress ? 'Fortsetzen' : 'Survey starten'}
+          onPress={handleStartSurvey}
         />
+        {hasProgress && (
+          <SecondaryButton
+            title="Neu starten"
+            onPress={handleStartFresh}
+            style={styles.secondaryButton}
+          />
+        )}
         <TouchableOpacity 
           style={styles.skipButton}
           onPress={() => router.replace('/(tabs)/dashboard')}
@@ -85,9 +173,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: spacing.section,
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.text.secondary,
+  },
   hero: {
     alignItems: 'center',
-    marginBottom: spacing.section,
+    marginBottom: spacing.xxl,
   },
   iconContainer: {
     width: 100,
@@ -111,6 +208,47 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.md,
     lineHeight: 24,
+  },
+  resumeCard: {
+    backgroundColor: colors.background.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xxl,
+    borderWidth: 1,
+    borderColor: colors.accent.primary,
+  },
+  resumeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  resumeTitle: {
+    ...typography.bodyMedium,
+    color: colors.accent.primary,
+  },
+  progressBarContainer: {
+    marginBottom: spacing.sm,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.accent.primary,
+    borderRadius: radius.full,
+  },
+  progressText: {
+    ...typography.caption,
+    color: colors.text.secondary,
+  },
+  resumeText: {
+    ...typography.small,
+    color: colors.text.secondary,
   },
   features: {
     gap: spacing.md,
@@ -154,6 +292,9 @@ const styles = StyleSheet.create({
   },
   actions: {
     paddingVertical: spacing.lg,
+  },
+  secondaryButton: {
+    marginTop: spacing.md,
   },
   skipButton: {
     alignItems: 'center',

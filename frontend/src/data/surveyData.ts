@@ -185,28 +185,28 @@ export const hustleTypes = {
     id: 'sprinter',
     name: 'Der Sprinter',
     emoji: '🏃',
-    description: 'Du willst schnell starten und Ergebnisse sehen. Action ist dein zweiter Vorname.',
+    description: 'Du willst schnell starten und Ergebnisse sehen. Action ist dein zweiter Vorname. Kleine Wins motivieren dich!',
     color: '#F59E0B',
   },
   builder: {
     id: 'builder',
     name: 'Der Builder',
     emoji: '🏗️',
-    description: 'Du magst Systeme und Struktur. Mit einem Plan bist du unaufhaltbar.',
+    description: 'Du magst Systeme und Struktur. Mit einem klaren Plan bist du unaufhaltbar. Du denkst langfristig.',
     color: '#10B981',
   },
   creator: {
     id: 'creator',
     name: 'Der Creator',
     emoji: '🎨',
-    description: 'Kreativität ist deine Stärke. Social Media und Branding liegen dir im Blut.',
+    description: 'Kreativität ist deine Stärke. Social Media und Branding liegen dir im Blut. Du inspirierst andere.',
     color: '#8B5CF6',
   },
   closer: {
     id: 'closer',
     name: 'Der Closer',
     emoji: '🤝',
-    description: 'Kommunikation und Überzeugung sind deine Superkräfte. Du bringst Deals zum Abschluss.',
+    description: 'Kommunikation und Überzeugung sind deine Superkräfte. Du bringst Deals zum Abschluss und liebst den Kontakt.',
     color: '#EF4444',
   },
 };
@@ -243,4 +243,6 @@ export interface HustleProfile {
   goal30Days: string;
   firstTodos: string[];
   hustleScore: number;
+  proofOfWorkLevel: string;
+  proofOfWorkDescription: string;
 }

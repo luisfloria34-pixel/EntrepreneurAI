@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper, PrimaryButton, OptionCard, MultiSelectChip, SurveyHeader } from '../../src/components';
@@ -9,12 +9,29 @@ import { useOnboarding } from '../../src/context/OnboardingContext';
 export default function SurveyScreen() {
   const router = useRouter();
   const { step } = useLocalSearchParams();
-  const { answers, setAnswer } = useOnboarding();
+  const { answers, setAnswer, setCurrentStep, isLoading } = useOnboarding();
   
   const currentStep = parseInt(step as string) || 1;
   const questionIndex = currentStep - 1;
   const question = surveyQuestions[questionIndex];
   const totalSteps = surveyQuestions.length;
+
+  // Save current step for resume functionality
+  useEffect(() => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep);
+    }
+  }, [currentStep]);
+
+  if (isLoading) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Laden...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   if (!question) {
     router.replace('/survey/result');
@@ -124,6 +141,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...typography.body,
+    color: colors.text.secondary,
   },
   questionSection: {
     marginBottom: spacing.xxxl,

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Share } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Share, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, PrimaryButton, SecondaryButton, ResultCard, SummaryRow } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
@@ -9,21 +9,28 @@ import { HustleProfile } from '../../src/data/surveyData';
 
 export default function SurveyResultScreen() {
   const router = useRouter();
-  const { calculateProfile, profile: existingProfile } = useOnboarding();
+  const { calculateProfile, profile: existingProfile, setCompleted } = useOnboarding();
   const [profile, setProfile] = useState<HustleProfile | null>(existingProfile);
+  const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
     if (!existingProfile) {
       const newProfile = calculateProfile();
       setProfile(newProfile);
     }
+    // Mark onboarding as completed
+    setCompleted(true);
   }, []);
 
   if (!profile) {
     return (
       <ScreenWrapper>
         <View style={styles.loading}>
+          <View style={styles.loadingIcon}>
+            <Ionicons name="analytics" size={48} color={colors.accent.primary} />
+          </View>
           <Text style={styles.loadingText}>Analysiere deine Antworten...</Text>
+          <Text style={styles.loadingSubtext}>Dein Hustle-Profil wird erstellt</Text>
         </View>
       </ScreenWrapper>
     );
@@ -32,20 +39,66 @@ export default function SurveyResultScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Mein Hustle-Profil: ${profile.hustleType.name} ${profile.hustleType.emoji}\nEmpfohlenes Modell: ${profile.businessModel.name}\nHustle Score: ${profile.hustleScore}\n\n#EntrepreneurAI`,
+        message: `🚀 Mein Hustle-Profil bei EntrepreneurAI:\n\n${profile.hustleType.emoji} ${profile.hustleType.name}\n💼 Empfohlen: ${profile.businessModel.name}\n📊 Hustle Score: ${profile.hustleScore}\n\n${profile.coachStyleEmoji} Coach: ${profile.coachStyle}\n🎯 30-Tage Ziel: ${profile.goal30Days}\n\n#EntrepreneurAI #Hustle #Entrepreneurship`,
       });
     } catch (error) {
       console.log(error);
     }
   };
 
+  const handleGoToDashboard = () => {
+    router.replace('/(tabs)/dashboard');
+  };
+
   return (
     <ScreenWrapper scroll>
       {/* Header */}
       <View style={styles.header}>
+        <Text style={styles.headerEmoji}>🎉</Text>
         <Text style={styles.headerTitle}>Dein Hustle-Profil</Text>
         <Text style={styles.headerSubtitle}>Basierend auf deinen Antworten</Text>
       </View>
+
+      {/* Share Card - Screenshot-fähig */}
+      <View ref={shareCardRef} style={styles.shareCardContainer}>
+        <View style={[styles.shareCard, { borderColor: profile.hustleType.color }]}>
+          <View style={styles.shareCardHeader}>
+            <Text style={styles.shareCardBrand}>EntrepreneurAI</Text>
+          </View>
+          
+          <View style={styles.shareCardContent}>
+            <Text style={styles.shareCardEmoji}>{profile.hustleType.emoji}</Text>
+            <Text style={styles.shareCardType}>{profile.hustleType.name}</Text>
+            
+            <View style={styles.shareCardScore}>
+              <Text style={styles.shareCardScoreValue}>{profile.hustleScore}</Text>
+              <Text style={styles.shareCardScoreLabel}>Hustle Score</Text>
+            </View>
+            
+            <View style={styles.shareCardDivider} />
+            
+            <View style={styles.shareCardInfo}>
+              <Text style={styles.shareCardInfoLabel}>{profile.businessModel.emoji} Empfohlen</Text>
+              <Text style={styles.shareCardInfoValue}>{profile.businessModel.name}</Text>
+            </View>
+            
+            <View style={styles.shareCardInfo}>
+              <Text style={styles.shareCardInfoLabel}>{profile.coachStyleEmoji} Coach Style</Text>
+              <Text style={styles.shareCardInfoValue}>{profile.coachStyle}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.shareCardFooter}>
+            <Text style={styles.shareCardFooterText}>Finde deinen Hustle-Typ</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Share Button */}
+      <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+        <Ionicons name="share-outline" size={20} color={colors.accent.primary} />
+        <Text style={styles.shareButtonText}>Profil teilen</Text>
+      </TouchableOpacity>
 
       {/* Hustle Score Card */}
       <View style={styles.scoreCard}>
@@ -76,7 +129,7 @@ export default function SurveyResultScreen() {
       {/* Business Model */}
       <ResultCard
         title={profile.businessModel.name}
-        subtitle="Empfohlenes Modell"
+        subtitle="Empfohlenes Start-Modell"
         emoji={profile.businessModel.emoji}
         color={colors.accent.primary}
       >
@@ -98,14 +151,19 @@ export default function SurveyResultScreen() {
         />
         <SummaryRow 
           emoji="⏰"
-          label="Routine" 
+          label="Tägliche Routine" 
           value={profile.routineSuggestion} 
         />
-        <View style={[styles.lastRow, { borderBottomWidth: 0 }]}>
+        <SummaryRow 
+          emoji="🎯"
+          label="30-Tage Ziel" 
+          value={profile.goal30Days} 
+        />
+        <View style={styles.lastRow}>
           <SummaryRow 
-            emoji="🎯"
-            label="30-Tage Ziel" 
-            value={profile.goal30Days} 
+            emoji="📸"
+            label="Proof-of-Work" 
+            value={`${profile.proofOfWorkLevel} – ${profile.proofOfWorkDescription}`} 
           />
         </View>
       </View>
@@ -135,7 +193,7 @@ export default function SurveyResultScreen() {
       {/* First Todos */}
       <ResultCard
         title="Deine ersten 3 To-Dos"
-        subtitle="Starte jetzt"
+        subtitle="Starte heute"
         emoji="🚀"
         color={colors.semantic.success}
       >
@@ -149,27 +207,11 @@ export default function SurveyResultScreen() {
         ))}
       </ResultCard>
 
-      {/* Share Card */}
-      <View style={styles.shareCard}>
-        <View style={styles.shareContent}>
-          <Text style={styles.shareEmoji}>{profile.hustleType.emoji}</Text>
-          <Text style={styles.shareName}>{profile.hustleType.name}</Text>
-          <Text style={styles.shareScore}>Score: {profile.hustleScore}</Text>
-          <Text style={styles.shareModel}>{profile.businessModel.name}</Text>
-        </View>
-        <Text style={styles.shareBrand}>EntrepreneurAI</Text>
-      </View>
-
       {/* Actions */}
       <View style={styles.actions}>
-        <SecondaryButton
-          title="Teilen"
-          onPress={handleShare}
-          style={styles.shareButton}
-        />
         <PrimaryButton
           title="Zum Dashboard"
-          onPress={() => router.replace('/(tabs)/dashboard')}
+          onPress={handleGoToDashboard}
         />
       </View>
     </ScreenWrapper>
@@ -182,13 +224,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  loadingIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: radius.full,
+    backgroundColor: `${colors.accent.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xxl,
+  },
   loadingText: {
     ...typography.h3,
+    color: colors.text.primary,
+  },
+  loadingSubtext: {
+    ...typography.body,
     color: colors.text.secondary,
+    marginTop: spacing.sm,
   },
   header: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
+  },
+  headerEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.md,
   },
   headerTitle: {
     ...typography.h1,
@@ -198,6 +258,94 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text.secondary,
     marginTop: spacing.sm,
+  },
+  // Share Card Styles - Screenshot-fähig
+  shareCardContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  shareCard: {
+    width: 280,
+    backgroundColor: colors.background.elevated,
+    borderRadius: radius.xl,
+    borderWidth: 2,
+    overflow: 'hidden',
+    ...shadows.lg,
+  },
+  shareCardHeader: {
+    backgroundColor: colors.background.tertiary,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  shareCardBrand: {
+    ...typography.captionMedium,
+    color: colors.accent.primary,
+    letterSpacing: 1,
+  },
+  shareCardContent: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  shareCardEmoji: {
+    fontSize: 56,
+    marginBottom: spacing.md,
+  },
+  shareCardType: {
+    ...typography.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  shareCardScore: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  shareCardScoreValue: {
+    ...typography.display,
+    color: colors.accent.primary,
+  },
+  shareCardScoreLabel: {
+    ...typography.caption,
+    color: colors.text.secondary,
+  },
+  shareCardDivider: {
+    width: '60%',
+    height: 1,
+    backgroundColor: colors.border.default,
+    marginBottom: spacing.lg,
+  },
+  shareCardInfo: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  shareCardInfoLabel: {
+    ...typography.caption,
+    color: colors.text.tertiary,
+    marginBottom: spacing.xs,
+  },
+  shareCardInfoValue: {
+    ...typography.bodyMedium,
+    color: colors.text.primary,
+  },
+  shareCardFooter: {
+    backgroundColor: colors.background.tertiary,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  shareCardFooterText: {
+    ...typography.caption,
+    color: colors.text.muted,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  shareButtonText: {
+    ...typography.bodyMedium,
+    color: colors.accent.primary,
   },
   scoreCard: {
     flexDirection: 'row',
@@ -311,45 +459,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     flex: 1,
   },
-  shareCard: {
-    backgroundColor: colors.background.elevated,
-    borderRadius: radius.xl,
-    padding: spacing.xxl,
-    marginBottom: spacing.xxl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  shareContent: {
-    alignItems: 'center',
-  },
-  shareEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  shareName: {
-    ...typography.h2,
-    color: colors.text.primary,
-  },
-  shareScore: {
-    ...typography.body,
-    color: colors.accent.primary,
-    marginTop: spacing.xs,
-  },
-  shareModel: {
-    ...typography.small,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
-  },
-  shareBrand: {
-    ...typography.caption,
-    color: colors.text.muted,
-    marginTop: spacing.lg,
-  },
   actions: {
     paddingBottom: spacing.lg,
-  },
-  shareButton: {
-    marginBottom: spacing.md,
   },
 });
