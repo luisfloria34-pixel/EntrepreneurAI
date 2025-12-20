@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScreenWrapper, AppHeader } from '../../../../src/components';
-import { colors, spacing, typography, radius } from '../../../../src/theme';
+import { ScreenWrapper, AppHeader } from '../../../src/components';
+import { colors, spacing, typography, radius } from '../../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { communityPosts, postComments } from '../../../../src/data/dummyData';
+import { communityPosts, postComments } from '../../../src/data/dummyData';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams();
