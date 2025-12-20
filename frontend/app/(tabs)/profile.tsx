@@ -1,128 +1,123 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, ListItem, Badge, ProgressBar } from '../../src/components';
-import { colors, spacing, typography, radius, shadows } from '../../src/theme';
+import { ScreenWrapper, ListItem, Badge, SectionHeader } from '../../src/components';
+import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { userData } from '../../src/data/dummyData';
+import { userData, allBadges } from '../../src/data/dummyData';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const earnedBadges = allBadges.filter(b => b.earned);
 
   return (
-    <ScreenWrapper edges={['top']}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Profile Header */}
-        <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {userData.name.split(' ').map((n) => n[0]).join('')}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.editAvatarBtn}>
-              <Ionicons name="camera" size={14} color={colors.text.primary} />
-            </TouchableOpacity>
+    <ScreenWrapper scroll>
+      {/* Profile Header */}
+      <View style={styles.header}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {userData.name.split(' ').map(n => n[0]).join('')}
+            </Text>
           </View>
-          <Text style={styles.userName}>{userData.name}</Text>
-          <Text style={styles.userEmail}>{userData.email}</Text>
+          <TouchableOpacity style={styles.editAvatarBtn}>
+            <Ionicons name="camera" size={14} color={colors.text.primary} />
+          </TouchableOpacity>
         </View>
+        <Text style={styles.userName}>{userData.name}</Text>
+        <Text style={styles.userEmail}>{userData.email}</Text>
+        <Text style={styles.userBio}>{userData.bio}</Text>
+      </View>
 
-        {/* Stats Card */}
-        <View style={styles.statsCard}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{userData.hustleScore.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>Hustle Score</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{userData.level}</Text>
-            <Text style={styles.statLabel}>Level</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{userData.streak}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
-          </View>
-        </View>
-
-        {/* Badges Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Badges Earned</Text>
-            <Badge label={`${userData.badges.length} badges`} size="small" />
-          </View>
-          <View style={styles.badgesGrid}>
-            {userData.badges.map((badge) => (
-              <View key={badge.id} style={styles.badgeItem}>
-                <View style={[styles.badgeIcon, { backgroundColor: `${badge.color}20` }]}>
-                  <Ionicons name={badge.icon as keyof typeof Ionicons.glyphMap} size={24} color={badge.color} />
-                </View>
-                <Text style={styles.badgeName}>{badge.name}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Settings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.settingsCard}>
-            <ListItem
-              title="Notifications"
-              leftIcon="notifications-outline"
-              onPress={() => {}}
-            />
-            <ListItem
-              title="Learning Goals"
-              leftIcon="flag-outline"
-              onPress={() => {}}
-            />
-            <ListItem
-              title="Privacy"
-              leftIcon="shield-outline"
-              onPress={() => {}}
-            />
-            <ListItem
-              title="Help & Support"
-              leftIcon="help-circle-outline"
-              onPress={() => {}}
-            />
-            <ListItem
-              title="About"
-              leftIcon="information-circle-outline"
-              onPress={() => {}}
-              showDivider={false}
-            />
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={() => router.replace('/')}
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.semantic.error} />
-          <Text style={styles.logoutText}>Log Out</Text>
+      {/* Stats */}
+      <View style={styles.statsCard}>
+        <TouchableOpacity style={styles.statItem} onPress={() => router.push('/analytics')}>
+          <Text style={styles.statValue}>{userData.hustleScore.toLocaleString()}</Text>
+          <Text style={styles.statLabel}>Hustle Score</Text>
         </TouchableOpacity>
+        <View style={styles.statDivider} />
+        <TouchableOpacity style={styles.statItem} onPress={() => router.push('/analytics')}>
+          <Text style={styles.statValue}>{userData.level}</Text>
+          <Text style={styles.statLabel}>Level</Text>
+        </TouchableOpacity>
+        <View style={styles.statDivider} />
+        <TouchableOpacity style={styles.statItem} onPress={() => router.push('/analytics')}>
+          <Text style={styles.statValue}>{userData.streak}</Text>
+          <Text style={styles.statLabel}>Day Streak</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Version */}
-        <Text style={styles.version}>EntrepreneurAI v1.0.0</Text>
-      </ScrollView>
+      {/* Badges */}
+      <SectionHeader 
+        title="Badges Earned" 
+        actionText={`${earnedBadges.length} of ${allBadges.length}`}
+        onAction={() => router.push('/badges')}
+      />
+      <View style={styles.badgesGrid}>
+        {earnedBadges.slice(0, 4).map((badge) => (
+          <TouchableOpacity 
+            key={badge.id} 
+            style={styles.badgeItem}
+            onPress={() => router.push(`/badge/${badge.id}`)}
+          >
+            <View style={[styles.badgeIcon, { backgroundColor: `${badge.color}20` }]}>
+              <Ionicons name={badge.icon as keyof typeof Ionicons.glyphMap} size={24} color={badge.color} />
+            </View>
+            <Text style={styles.badgeName} numberOfLines={1}>{badge.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Settings */}
+      <SectionHeader title="Settings" />
+      <View style={styles.settingsCard}>
+        <ListItem
+          title="Notifications"
+          leftIcon="notifications-outline"
+          onPress={() => router.push('/settings/notifications')}
+        />
+        <ListItem
+          title="Learning Goals"
+          leftIcon="flag-outline"
+          onPress={() => router.push('/settings/goals')}
+        />
+        <ListItem
+          title="Privacy"
+          leftIcon="shield-outline"
+          onPress={() => router.push('/settings/privacy')}
+        />
+        <ListItem
+          title="Help & Support"
+          leftIcon="help-circle-outline"
+          onPress={() => router.push('/settings/help')}
+        />
+        <ListItem
+          title="About"
+          leftIcon="information-circle-outline"
+          onPress={() => router.push('/settings/about')}
+          showDivider={false}
+        />
+      </View>
+
+      {/* Logout */}
+      <TouchableOpacity 
+        style={styles.logoutButton}
+        onPress={() => router.replace('/')}
+      >
+        <Ionicons name="log-out-outline" size={20} color={colors.semantic.error} />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.version}>EntrepreneurAI v1.0.0</Text>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
   header: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.lg,
   },
   avatarContainer: {
     position: 'relative',
@@ -136,8 +131,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
+    ...typography.h1,
     color: colors.text.inverse,
   },
   editAvatarBtn: {
@@ -154,22 +148,27 @@ const styles = StyleSheet.create({
     borderColor: colors.background.primary,
   },
   userName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
+    ...typography.h2,
     color: colors.text.primary,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   userEmail: {
-    fontSize: typography.fontSize.sm,
+    ...typography.body,
     color: colors.text.secondary,
     marginTop: spacing.xs,
+  },
+  userBio: {
+    ...typography.small,
+    color: colors.text.tertiary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   statsCard: {
     flexDirection: 'row',
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
+    padding: spacing.xl,
+    marginTop: spacing.lg,
   },
   statItem: {
     flex: 1,
@@ -180,36 +179,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border.default,
   },
   statValue: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
+    ...typography.h2,
     color: colors.accent.primary,
   },
   statLabel: {
-    fontSize: typography.fontSize.xs,
+    ...typography.caption,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
-  section: {
-    marginTop: spacing.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semiBold,
-    color: colors.text.primary,
-  },
   badgesGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.md,
   },
   badgeItem: {
-    width: '22%',
+    flex: 1,
     alignItems: 'center',
   },
   badgeIcon: {
@@ -221,14 +204,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   badgeName: {
-    fontSize: typography.fontSize.xs,
+    ...typography.caption,
     color: colors.text.secondary,
     textAlign: 'center',
   },
   settingsCard: {
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -236,19 +219,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: `${colors.semantic.error}15`,
     borderRadius: radius.lg,
-    padding: spacing.md,
-    marginTop: spacing.xl,
+    padding: spacing.lg,
+    marginTop: spacing.xxl,
     gap: spacing.sm,
   },
   logoutText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.bodyMedium,
     color: colors.semantic.error,
   },
   version: {
-    fontSize: typography.fontSize.xs,
-    color: colors.text.tertiary,
+    ...typography.caption,
+    color: colors.text.muted,
     textAlign: 'center',
-    marginTop: spacing.lg,
+    marginTop: spacing.xxl,
+    marginBottom: spacing.lg,
   },
 });

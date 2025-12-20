@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput as RNTextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { aiChatMessages, quickPrompts } from '../../src/data/dummyData';
+import { aiChatMessages, quickPrompts, suggestedPrompts } from '../../src/data/dummyData';
 
 type Message = {
   id: string;
@@ -15,11 +15,12 @@ type Message = {
 export default function CoachScreen() {
   const [messages, setMessages] = useState<Message[]>(aiChatMessages);
   const [inputText, setInputText] = useState('');
+  const [showPrompts, setShowPrompts] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleSend = () => {
     if (!inputText.trim()) return;
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -29,7 +30,6 @@ export default function CoachScreen() {
     setMessages([...messages, userMessage]);
     setInputText('');
 
-    // Simulate AI response (this is just UI demo, no real AI)
     setTimeout(() => {
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -38,11 +38,8 @@ export default function CoachScreen() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiResponse]);
+      scrollRef.current?.scrollToEnd({ animated: true });
     }, 1000);
-  };
-
-  const handleQuickPrompt = (prompt: string) => {
-    setInputText(prompt);
   };
 
   return (
@@ -51,6 +48,8 @@ export default function CoachScreen() {
         <AppHeader 
           title="AI Coach"
           subtitle="Your personal business mentor"
+          rightIcon="sparkles-outline"
+          onRightPress={() => setShowPrompts(!showPrompts)}
         />
       </View>
 
@@ -59,38 +58,66 @@ export default function CoachScreen() {
         style={styles.keyboardView}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView 
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {messages.map((message) => (
-            <View
-              key={message.id}
-              style={[
-                styles.messageBubble,
-                message.role === 'user' ? styles.userBubble : styles.assistantBubble,
-              ]}
-            >
-              {message.role === 'assistant' && (
-                <View style={styles.aiAvatar}>
-                  <Ionicons name="sparkles" size={16} color={colors.accent.primary} />
+        {showPrompts ? (
+          <ScrollView style={styles.promptsContainer} contentContainerStyle={styles.promptsContent}>
+            <Text style={styles.promptsTitle}>Suggested Prompts</Text>
+            <Text style={styles.promptsSubtitle}>Tap any prompt to start a conversation</Text>
+            {suggestedPrompts.map((item) => (
+              <TouchableOpacity 
+                key={item.id}
+                style={styles.promptCard}
+                onPress={() => {
+                  setInputText(item.prompt);
+                  setShowPrompts(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.promptIcon}>
+                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={20} color={colors.accent.primary} />
                 </View>
-              )}
-              <View style={[
-                styles.messageContent,
-                message.role === 'user' ? styles.userContent : styles.assistantContent,
-              ]}>
-                <Text style={[
-                  styles.messageText,
-                  message.role === 'user' && styles.userText,
+                <View style={styles.promptContent}>
+                  <Text style={styles.promptCategory}>{item.category}</Text>
+                  <Text style={styles.promptText}>{item.prompt}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={18} color={colors.text.tertiary} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView 
+            ref={scrollRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {messages.map((message) => (
+              <View
+                key={message.id}
+                style={[
+                  styles.messageBubble,
+                  message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                ]}
+              >
+                {message.role === 'assistant' && (
+                  <View style={styles.aiAvatar}>
+                    <Ionicons name="sparkles" size={16} color={colors.accent.primary} />
+                  </View>
+                )}
+                <View style={[
+                  styles.messageContent,
+                  message.role === 'user' ? styles.userContent : styles.assistantContent,
                 ]}>
-                  {message.content}
-                </Text>
+                  <Text style={[
+                    styles.messageText,
+                    message.role === 'user' && styles.userText,
+                  ]}>
+                    {message.content}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
-        </ScrollView>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Quick Prompts */}
         <View style={styles.quickPromptsContainer}>
@@ -103,7 +130,7 @@ export default function CoachScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.quickPromptChip}
-                onPress={() => handleQuickPrompt(prompt)}
+                onPress={() => setInputText(prompt)}
               >
                 <Text style={styles.quickPromptText}>{prompt}</Text>
               </TouchableOpacity>
@@ -111,13 +138,13 @@ export default function CoachScreen() {
           </ScrollView>
         </View>
 
-        {/* Input Bar */}
+        {/* Input */}
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <RNTextInput
               style={styles.input}
               placeholder="Ask your AI coach anything..."
-              placeholderTextColor={colors.text.tertiary}
+              placeholderTextColor={colors.text.muted}
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -146,7 +173,7 @@ export default function CoachScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.default,
   },
@@ -157,8 +184,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesContent: {
-    padding: spacing.md,
-    gap: spacing.md,
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
   messageBubble: {
     flexDirection: 'row',
@@ -181,7 +208,7 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
     maxWidth: '100%',
   },
   userContent: {
@@ -193,12 +220,56 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.xs,
   },
   messageText: {
-    fontSize: typography.fontSize.md,
+    ...typography.body,
     color: colors.text.primary,
-    lineHeight: 22,
   },
   userText: {
     color: colors.text.inverse,
+  },
+  promptsContainer: {
+    flex: 1,
+  },
+  promptsContent: {
+    padding: spacing.lg,
+  },
+  promptsTitle: {
+    ...typography.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  promptsSubtitle: {
+    ...typography.body,
+    color: colors.text.secondary,
+    marginBottom: spacing.xxl,
+  },
+  promptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  promptIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: `${colors.accent.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  promptContent: {
+    flex: 1,
+  },
+  promptCategory: {
+    ...typography.caption,
+    color: colors.accent.primary,
+    marginBottom: spacing.xs,
+  },
+  promptText: {
+    ...typography.body,
+    color: colors.text.primary,
   },
   quickPromptsContainer: {
     borderTopWidth: 1,
@@ -206,23 +277,23 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   quickPromptsContent: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
   quickPromptChip: {
     backgroundColor: colors.background.tertiary,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border.default,
   },
   quickPromptText: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
   },
   inputContainer: {
-    padding: spacing.md,
+    padding: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border.default,
     backgroundColor: colors.background.primary,
@@ -232,12 +303,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     backgroundColor: colors.background.tertiary,
     borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
   input: {
     flex: 1,
-    fontSize: typography.fontSize.md,
+    ...typography.body,
     color: colors.text.primary,
     maxHeight: 100,
     paddingVertical: spacing.sm,

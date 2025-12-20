@@ -1,8 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../src/theme';
-import { Platform } from 'react-native';
+import { colors, typography, spacing } from '../../src/theme';
+import { Platform, View } from 'react-native';
 
 export default function TabsLayout() {
   return (
@@ -13,15 +13,15 @@ export default function TabsLayout() {
           backgroundColor: colors.background.secondary,
           borderTopColor: colors.border.default,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 68,
+          height: Platform.OS === 'ios' ? 85 : 65,
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.accent.primary,
         tabBarInactiveTintColor: colors.text.tertiary,
         tabBarLabelStyle: {
-          fontSize: typography.fontSize.xs,
-          fontWeight: typography.fontWeight.medium,
+          ...typography.caption,
+          fontWeight: '500',
         },
       }}
     >
@@ -29,8 +29,8 @@ export default function TabsLayout() {
         name="dashboard"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
           ),
         }}
       />
@@ -38,8 +38,8 @@ export default function TabsLayout() {
         name="coach"
         options={{
           title: 'AI Coach',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={24} color={color} />
           ),
         }}
       />
@@ -47,8 +47,8 @@ export default function TabsLayout() {
         name="courses"
         options={{
           title: 'Courses',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="school" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'school' : 'school-outline'} size={24} color={color} />
           ),
         }}
       />
@@ -56,8 +56,8 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
           ),
         }}
       />

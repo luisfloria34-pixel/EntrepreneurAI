@@ -1,150 +1,162 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, Card, ProgressBar, Badge } from '../../src/components';
+import { ScreenWrapper, Card, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { userData, dailyTask, currentCourse, quickActions } from '../../src/data/dummyData';
+import { userData, dailyTasks, dailyChallenge, courses, quickActions } from '../../src/data/dummyData';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const currentCourse = courses.find(c => c.progress > 0 && c.progress < 100);
 
   return (
-    <ScreenWrapper edges={['top']}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+    <ScreenWrapper scroll>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Good morning,</Text>
+          <Text style={styles.userName}>{userData.name.split(' ')[0]}</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.streakBadge}
+          onPress={() => router.push('/analytics')}
+        >
+          <Ionicons name="flame" size={20} color="#F59E0B" />
+          <Text style={styles.streakText}>{userData.streak} day streak</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Hustle Score */}
+      <TouchableOpacity 
+        style={styles.scoreCard}
+        onPress={() => router.push('/analytics')}
+        activeOpacity={0.8}
       >
-        {/* Header */}
-        <View style={styles.header}>
+        <View style={styles.scoreHeader}>
           <View>
-            <Text style={styles.greeting}>Good morning,</Text>
-            <Text style={styles.userName}>{userData.name.split(' ')[0]}</Text>
+            <Text style={styles.scoreLabel}>Hustle Score</Text>
+            <Text style={styles.scoreValue}>{userData.hustleScore.toLocaleString()}</Text>
           </View>
-          <TouchableOpacity style={styles.streakBadge}>
-            <Ionicons name="flame" size={20} color="#F59E0B" />
-            <Text style={styles.streakText}>{userData.streak} day streak</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Hustle Score Card */}
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreHeader}>
-            <View>
-              <Text style={styles.scoreLabel}>Hustle Score</Text>
-              <Text style={styles.scoreValue}>{userData.hustleScore.toLocaleString()}</Text>
-            </View>
-            <View style={styles.levelBadge}>
-              <Ionicons name="trophy" size={18} color={colors.accent.primary} />
-              <Text style={styles.levelText}>Level {userData.level}</Text>
-            </View>
+          <View style={styles.levelBadge}>
+            <Ionicons name="trophy" size={16} color={colors.accent.primary} />
+            <Text style={styles.levelText}>Level {userData.level}</Text>
           </View>
-          <ProgressBar 
-            progress={(userData.hustleScore % 1000) / 10} 
-            showPercentage={false}
-            height={6}
-            style={styles.scoreProgress}
-          />
-          <Text style={styles.xpToLevel}>
-            {1000 - (userData.hustleScore % 1000)} XP to next level
-          </Text>
         </View>
+        <ProgressBar 
+          progress={(userData.hustleScore % 1000) / 10} 
+          showPercentage={false}
+          height={6}
+        />
+        <Text style={styles.xpToLevel}>{1000 - (userData.hustleScore % 1000)} XP to next level</Text>
+      </TouchableOpacity>
 
-        {/* Daily Task */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today's Challenge</Text>
-          <TouchableOpacity 
-            style={styles.dailyTaskCard}
-            activeOpacity={0.8}
-            onPress={() => router.push('/lesson')}
-          >
-            <View style={styles.dailyTaskIcon}>
-              <Ionicons name="flash" size={28} color="#F59E0B" />
-            </View>
-            <View style={styles.dailyTaskContent}>
-              <Text style={styles.dailyTaskTitle}>{dailyTask.title}</Text>
-              <Text style={styles.dailyTaskDesc}>{dailyTask.description}</Text>
-              <View style={styles.dailyTaskMeta}>
-                <Badge label={`+${dailyTask.xp} XP`} variant="warning" size="small" />
-                <Text style={styles.dailyTaskTime}>~10 min</Text>
-              </View>
-            </View>
-            <Ionicons name="play-circle" size={32} color={colors.accent.primary} />
-          </TouchableOpacity>
+      {/* Daily Challenge */}
+      <SectionHeader title="Today's Challenge" actionText="View" onAction={() => router.push('/challenge')} />
+      <TouchableOpacity 
+        style={styles.challengeCard}
+        onPress={() => router.push('/challenge')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.challengeIcon}>
+          <Ionicons name="flash" size={28} color="#F59E0B" />
         </View>
-
-        {/* Continue Learning */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Continue Learning</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/courses')}>
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
+        <View style={styles.challengeContent}>
+          <Text style={styles.challengeTitle}>{dailyChallenge.title}</Text>
+          <Text style={styles.challengeDesc} numberOfLines={1}>{dailyChallenge.description}</Text>
+          <View style={styles.challengeMeta}>
+            <Badge label={`+${dailyChallenge.xp} XP`} variant="warning" size="small" />
+            <Text style={styles.challengeTime}>{dailyChallenge.timeLimit}</Text>
           </View>
+        </View>
+        <Ionicons name="play-circle" size={36} color={colors.accent.primary} />
+      </TouchableOpacity>
+
+      {/* Continue Learning */}
+      {currentCourse && (
+        <>
+          <SectionHeader title="Continue Learning" actionText="All Courses" onAction={() => router.push('/(tabs)/courses')} />
           <TouchableOpacity 
             style={styles.courseCard}
+            onPress={() => router.push(`/course/${currentCourse.id}`)}
             activeOpacity={0.8}
-            onPress={() => router.push('/lesson')}
           >
-            <View style={styles.courseIcon}>
-              <Ionicons name="rocket" size={32} color={colors.accent.primary} />
+            <View style={[styles.courseIcon, { backgroundColor: `${currentCourse.color}20` }]}>
+              <Ionicons name={currentCourse.icon as keyof typeof Ionicons.glyphMap} size={28} color={currentCourse.color} />
             </View>
             <View style={styles.courseContent}>
               <Text style={styles.courseTitle}>{currentCourse.title}</Text>
-              <Text style={styles.courseLesson}>Next: {currentCourse.nextLesson}</Text>
+              <Text style={styles.courseLesson}>Lesson {currentCourse.completedLessons + 1} of {currentCourse.totalLessons}</Text>
               <ProgressBar 
                 progress={currentCourse.progress}
-                label={`${currentCourse.completedLessons}/${currentCourse.totalLessons} lessons`}
+                showPercentage
                 height={6}
+                color={currentCourse.color}
                 style={styles.courseProgress}
               />
             </View>
           </TouchableOpacity>
-        </View>
+        </>
+      )}
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action) => (
-              <TouchableOpacity 
-                key={action.id}
-                style={styles.quickActionCard}
-                activeOpacity={0.7}
-                onPress={() => {
-                  if (action.id === '2') router.push('/(tabs)/coach');
-                }}
-              >
-                <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
-                  <Ionicons name={action.icon as keyof typeof Ionicons.glyphMap} size={24} color={action.color} />
-                </View>
-                <Text style={styles.quickActionText}>{action.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
+      {/* Quick Actions */}
+      <SectionHeader title="Quick Actions" />
+      <View style={styles.quickActionsGrid}>
+        {quickActions.map((action) => (
+          <TouchableOpacity 
+            key={action.id}
+            style={styles.quickActionCard}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (action.route) router.push(action.route as any);
+            }}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
+              <Ionicons name={action.icon as keyof typeof Ionicons.glyphMap} size={24} color={action.color} />
+            </View>
+            <Text style={styles.quickActionText}>{action.title}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Daily Tasks */}
+      <SectionHeader title="Daily Tasks" actionText="View All" onAction={() => router.push('/tasks')} />
+      <View style={styles.tasksContainer}>
+        {dailyTasks.slice(0, 3).map((task, index) => (
+          <TouchableOpacity 
+            key={task.id}
+            style={[styles.taskItem, index < 2 && styles.taskDivider]}
+            onPress={() => router.push('/tasks')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.taskCheck, task.completed && styles.taskCheckDone]}>
+              {task.completed && <Ionicons name="checkmark" size={14} color={colors.text.inverse} />}
+            </View>
+            <View style={styles.taskContent}>
+              <Text style={[styles.taskTitle, task.completed && styles.taskTitleDone]}>{task.title}</Text>
+              <Text style={styles.taskDesc}>{task.description}</Text>
+            </View>
+            <Badge label={`+${task.xp}`} variant={task.completed ? 'success' : 'default'} size="small" />
+          </TouchableOpacity>
+        ))}
+      </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingVertical: spacing.md,
+    paddingTop: spacing.lg,
   },
   greeting: {
-    fontSize: typography.fontSize.md,
+    ...typography.body,
     color: colors.text.secondary,
   },
   userName: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
+    ...typography.h1,
     color: colors.text.primary,
     marginTop: spacing.xs,
   },
@@ -158,32 +170,29 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   streakText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
+    ...typography.smallMedium,
     color: '#F59E0B',
   },
   scoreCard: {
     backgroundColor: colors.background.elevated,
     borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
+    padding: spacing.xl,
+    marginTop: spacing.xxl,
     borderWidth: 1,
     borderColor: colors.border.default,
-    ...shadows.md,
   },
   scoreHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   scoreLabel: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
   },
   scoreValue: {
-    fontSize: typography.fontSize.display,
-    fontWeight: typography.fontWeight.bold,
+    ...typography.display,
     color: colors.text.primary,
     marginTop: spacing.xs,
   },
@@ -197,104 +206,77 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   levelText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.smallMedium,
     color: colors.accent.primary,
-  },
-  scoreProgress: {
-    marginBottom: spacing.sm,
   },
   xpToLevel: {
-    fontSize: typography.fontSize.xs,
+    ...typography.caption,
     color: colors.text.tertiary,
+    marginTop: spacing.sm,
   },
-  section: {
-    marginTop: spacing.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semiBold,
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
-  seeAll: {
-    fontSize: typography.fontSize.sm,
-    color: colors.accent.primary,
-    fontWeight: typography.fontWeight.medium,
-    marginBottom: spacing.md,
-  },
-  dailyTaskCard: {
+  challengeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: '#F59E0B40',
   },
-  dailyTaskIcon: {
+  challengeIcon: {
     width: 56,
     height: 56,
     borderRadius: radius.md,
     backgroundColor: '#F59E0B20',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.lg,
   },
-  dailyTaskContent: {
+  challengeContent: {
     flex: 1,
   },
-  dailyTaskTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+  challengeTitle: {
+    ...typography.bodyMedium,
     color: colors.text.primary,
   },
-  dailyTaskDesc: {
-    fontSize: typography.fontSize.sm,
+  challengeDesc: {
+    ...typography.small,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
-  dailyTaskMeta: {
+  challengeMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.sm,
     gap: spacing.md,
   },
-  dailyTaskTime: {
-    fontSize: typography.fontSize.xs,
+  challengeTime: {
+    ...typography.caption,
     color: colors.text.tertiary,
   },
   courseCard: {
     flexDirection: 'row',
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   courseIcon: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: radius.lg,
-    backgroundColor: `${colors.accent.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.lg,
   },
   courseContent: {
     flex: 1,
   },
   courseTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.bodyMedium,
     color: colors.text.primary,
   },
   courseLesson: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
@@ -307,10 +289,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   quickActionCard: {
-    width: '47%',
+    width: '48%',
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
     alignItems: 'center',
   },
   quickActionIcon: {
@@ -322,8 +304,51 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   quickActionText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
+    ...typography.smallMedium,
     color: colors.text.primary,
+  },
+  tasksContainer: {
+    backgroundColor: colors.background.card,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  taskDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.default,
+  },
+  taskCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.full,
+    borderWidth: 2,
+    borderColor: colors.border.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  taskCheckDone: {
+    backgroundColor: colors.semantic.success,
+    borderColor: colors.semantic.success,
+  },
+  taskContent: {
+    flex: 1,
+  },
+  taskTitle: {
+    ...typography.body,
+    color: colors.text.primary,
+  },
+  taskTitleDone: {
+    color: colors.text.secondary,
+    textDecorationLine: 'line-through',
+  },
+  taskDesc: {
+    ...typography.caption,
+    color: colors.text.tertiary,
+    marginTop: spacing.xs,
   },
 });

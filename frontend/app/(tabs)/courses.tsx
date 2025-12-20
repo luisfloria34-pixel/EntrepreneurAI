@@ -1,42 +1,47 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, AppHeader, ProgressBar, Badge } from '../../src/components';
+import { ScreenWrapper, AppHeader, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { courses } from '../../src/data/dummyData';
 
 export default function CoursesScreen() {
   const router = useRouter();
+  const inProgress = courses.filter(c => c.progress > 0 && c.progress < 100);
+  const available = courses.filter(c => c.progress === 0);
 
   return (
-    <ScreenWrapper edges={['top']}>
-      <AppHeader title="Courses" subtitle="Master the skills of entrepreneurship" />
+    <ScreenWrapper scroll>
+      <AppHeader 
+        title="Courses" 
+        subtitle="Master entrepreneurship skills"
+        large
+      />
       
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Active Courses */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>In Progress</Text>
-          {courses
-            .filter((c) => c.progress > 0)
-            .map((course) => (
-              <CourseCard key={course.id} course={course} onPress={() => router.push('/lesson')} />
-            ))}
-        </View>
+      {/* In Progress */}
+      {inProgress.length > 0 && (
+        <>
+          <SectionHeader title="In Progress" />
+          {inProgress.map((course) => (
+            <CourseCard 
+              key={course.id} 
+              course={course} 
+              onPress={() => router.push(`/course/${course.id}`)} 
+            />
+          ))}
+        </>
+      )}
 
-        {/* Available Courses */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Available Courses</Text>
-          {courses
-            .filter((c) => c.progress === 0)
-            .map((course) => (
-              <CourseCard key={course.id} course={course} onPress={() => router.push('/lesson')} />
-            ))}
-        </View>
-      </ScrollView>
+      {/* Available */}
+      <SectionHeader title="Available Courses" />
+      {available.map((course) => (
+        <CourseCard 
+          key={course.id} 
+          course={course} 
+          onPress={() => router.push(`/course/${course.id}`)} 
+        />
+      ))}
     </ScreenWrapper>
   );
 }
@@ -47,25 +52,21 @@ interface CourseCardProps {
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ course, onPress }) => (
-  <TouchableOpacity style={styles.courseCard} onPress={onPress} activeOpacity={0.8}>
+  <TouchableOpacity style={styles.courseCard} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.courseHeader}>
       <View style={[styles.courseIcon, { backgroundColor: `${course.color}20` }]}>
-        <Ionicons name={course.icon as keyof typeof Ionicons.glyphMap} size={28} color={course.color} />
+        <Ionicons name={course.icon as keyof typeof Ionicons.glyphMap} size={26} color={course.color} />
       </View>
       <View style={styles.courseInfo}>
         <Text style={styles.courseTitle}>{course.title}</Text>
         <View style={styles.courseMeta}>
-          <Badge label={course.level} size="small" variant="default" />
-          <View style={styles.metaDivider} />
+          <Badge label={course.level} size="small" />
           <Text style={styles.metaText}>{course.totalLessons} lessons</Text>
-          <View style={styles.metaDivider} />
           <Text style={styles.metaText}>{course.duration}</Text>
         </View>
       </View>
     </View>
-    <Text style={styles.courseDescription} numberOfLines={2}>
-      {course.description}
-    </Text>
+    <Text style={styles.courseDescription} numberOfLines={2}>{course.description}</Text>
     {course.progress > 0 && (
       <ProgressBar 
         progress={course.progress}
@@ -76,90 +77,100 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onPress }) => (
       />
     )}
     <View style={styles.courseFooter}>
-      <Text style={styles.startText}>
-        {course.progress > 0 ? 'Continue Learning' : 'Start Course'}
-      </Text>
-      <Ionicons name="arrow-forward" size={18} color={colors.accent.primary} />
+      <View style={styles.instructorInfo}>
+        <Ionicons name="person-circle" size={20} color={colors.text.tertiary} />
+        <Text style={styles.instructorName}>{course.instructor}</Text>
+        <View style={styles.rating}>
+          <Ionicons name="star" size={14} color="#F59E0B" />
+          <Text style={styles.ratingText}>{course.rating}</Text>
+        </View>
+      </View>
+      <View style={styles.startButton}>
+        <Text style={styles.startText}>{course.progress > 0 ? 'Continue' : 'Start'}</Text>
+        <Ionicons name="arrow-forward" size={16} color={colors.accent.primary} />
+      </View>
     </View>
   </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
-  section: {
-    marginTop: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semiBold,
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
   courseCard: {
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   courseHeader: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   courseIcon: {
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.lg,
   },
   courseInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   courseTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.h3,
     color: colors.text.primary,
   },
   courseMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  metaDivider: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.text.tertiary,
-    marginHorizontal: spacing.sm,
+    marginTop: spacing.sm,
+    gap: spacing.md,
   },
   metaText: {
-    fontSize: typography.fontSize.xs,
+    ...typography.caption,
     color: colors.text.tertiary,
   },
   courseDescription: {
-    fontSize: typography.fontSize.sm,
+    ...typography.body,
     color: colors.text.secondary,
-    lineHeight: 20,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   progressBar: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   courseFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border.default,
   },
+  instructorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  instructorName: {
+    ...typography.small,
+    color: colors.text.secondary,
+  },
+  rating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  ratingText: {
+    ...typography.smallMedium,
+    color: colors.text.secondary,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   startText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.smallMedium,
     color: colors.accent.primary,
   },
 });
