@@ -9,3 +9,8 @@ export { Badge } from './Badge';
 export { ListItem } from './ListItem';
 export { SectionHeader } from './SectionHeader';
 export { EmptyState } from './EmptyState';
+export { OptionCard } from './OptionCard';
+export { MultiSelectChip } from './MultiSelectChip';
+export { ResultCard } from './ResultCard';
+export { SummaryRow } from './SummaryRow';
+export { SurveyHeader } from './SurveyHeader';
