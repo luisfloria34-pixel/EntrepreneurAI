@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScreenWrapper, AppHeader, PrimaryButton, Badge } from '../../../../src/components';
-import { colors, spacing, typography, radius } from '../../../../src/theme';
+import { ScreenWrapper, AppHeader, PrimaryButton, Badge } from '../../../src/components';
+import { colors, spacing, typography, radius } from '../../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function UserProfileScreen() {
