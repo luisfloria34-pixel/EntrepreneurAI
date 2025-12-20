@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, TextInput } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    router.replace('/(tabs)/dashboard');
+  const handleSignup = () => {
+    router.push('/onboarding');
   };
 
   return (
@@ -20,11 +21,19 @@ export default function LoginScreen() {
       
       <View style={styles.content}>
         <View style={styles.headerSection}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Start your entrepreneurial journey today</Text>
         </View>
 
         <View style={styles.formSection}>
+          <TextInput
+            label="Full Name"
+            placeholder="Enter your name"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            leftIcon="person-outline"
+          />
           <TextInput
             label="Email"
             placeholder="Enter your email"
@@ -35,29 +44,22 @@ export default function LoginScreen() {
           />
           <TextInput
             label="Password"
-            placeholder="Enter your password"
+            placeholder="Create a password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             leftIcon="lock-closed-outline"
           />
-          
-          <TouchableOpacity 
-            style={styles.forgotPassword}
-            onPress={() => router.push('/forgot-password')}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
 
           <PrimaryButton 
-            title="Sign In"
-            onPress={handleLogin}
-            style={styles.loginButton}
+            title="Create Account"
+            onPress={handleSignup}
+            style={styles.signupButton}
           />
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
+            <Text style={styles.dividerText}>or sign up with</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -72,9 +74,9 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/signup')}>
-            <Text style={styles.footerLink}>Sign Up</Text>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/login')}>
+            <Text style={styles.footerLink}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -103,17 +105,8 @@ const styles = StyleSheet.create({
   formSection: {
     flex: 1,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.xxl,
-    marginTop: -spacing.sm,
-  },
-  forgotPasswordText: {
-    ...typography.smallMedium,
-    color: colors.accent.primary,
-  },
-  loginButton: {
-    marginTop: spacing.sm,
+  signupButton: {
+    marginTop: spacing.lg,
   },
   divider: {
     flexDirection: 'row',

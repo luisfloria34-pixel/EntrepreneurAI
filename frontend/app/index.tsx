@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, PrimaryButton, SecondaryButton } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
@@ -9,38 +9,38 @@ export default function WelcomeScreen() {
   const router = useRouter();
 
   return (
-    <ScreenWrapper style={styles.container}>
+    <ScreenWrapper scroll padded>
       <View style={styles.content}>
-        {/* Logo Section */}
+        {/* Logo */}
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
             <Ionicons name="rocket" size={48} color={colors.accent.primary} />
           </View>
           <Text style={styles.appName}>EntrepreneurAI</Text>
-          <Text style={styles.tagline}>Build Your Future, One Lesson at a Time</Text>
+          <Text style={styles.tagline}>Build Your Future,{"\n"}One Lesson at a Time</Text>
         </View>
 
-        {/* Features Section */}
+        {/* Features */}
         <View style={styles.featuresSection}>
           <FeatureItem 
             icon="bulb-outline"
             title="AI-Powered Learning"
-            description="Personalized coaching for your journey"
+            description="Personal coaching tailored to your goals"
           />
           <FeatureItem 
             icon="trending-up-outline"
-            title="Track Progress"
-            description="Build your hustle score and streak"
+            title="Track Your Progress"
+            description="Build your hustle score and maintain streaks"
           />
           <FeatureItem 
             icon="people-outline"
-            title="Real Skills"
-            description="Business, marketing, and leadership"
+            title="Join the Community"
+            description="Connect with fellow entrepreneurs"
           />
         </View>
       </View>
 
-      {/* CTA Buttons */}
+      {/* CTA */}
       <View style={styles.ctaSection}>
         <PrimaryButton 
           title="Get Started"
@@ -69,18 +69,14 @@ const FeatureItem = ({ icon, title, description }: { icon: keyof typeof Ionicons
 );
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.section,
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.section,
   },
   logoContainer: {
     width: 100,
@@ -89,31 +85,31 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.accent.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xxl,
     borderWidth: 2,
     borderColor: `${colors.accent.primary}30`,
   },
   appName: {
-    fontSize: typography.fontSize.display,
-    fontWeight: typography.fontWeight.bold,
+    ...typography.display,
     color: colors.text.primary,
     letterSpacing: -1,
   },
   tagline: {
-    fontSize: typography.fontSize.md,
+    ...typography.body,
     color: colors.text.secondary,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     textAlign: 'center',
+    lineHeight: 24,
   },
   featuresSection: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   featureIcon: {
     width: 48,
@@ -122,22 +118,22 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.accent.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.lg,
   },
   featureText: {
     flex: 1,
   },
   featureTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.bodyMedium,
     color: colors.text.primary,
   },
   featureDescription: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
   ctaSection: {
+    paddingTop: spacing.xxl,
     paddingBottom: spacing.lg,
   },
   secondaryButton: {
