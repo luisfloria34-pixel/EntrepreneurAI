@@ -1,182 +1,158 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, PrimaryButton } from '../src/components';
+import { ScreenWrapper, PrimaryButton, SecondaryButton } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { onboardingQuestions } from '../src/data/dummyData';
 
-export default function OnboardingScreen() {
+export default function OnboardingStartScreen() {
   const router = useRouter();
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-
-  const question = onboardingQuestions[currentQuestion];
-  const progress = ((currentQuestion + 1) / onboardingQuestions.length) * 100;
-
-  const handleContinue = () => {
-    if (currentQuestion < onboardingQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedOption(null);
-    } else {
-      router.replace('/(tabs)/dashboard');
-    }
-  };
 
   return (
-    <ScreenWrapper style={styles.container}>
-      {/* Progress */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
+    <ScreenWrapper scroll>
+      <View style={styles.content}>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="rocket" size={56} color={colors.accent.primary} />
+          </View>
+          <Text style={styles.title}>Lass uns starten!</Text>
+          <Text style={styles.subtitle}>
+            Beantworte 13 kurze Fragen, damit wir deinen{"\n"}persönlichen Hustle-Plan erstellen können.
+          </Text>
         </View>
-        <Text style={styles.progressText}>{currentQuestion + 1}/{onboardingQuestions.length}</Text>
+
+        {/* Features */}
+        <View style={styles.features}>
+          <FeatureItem 
+            emoji="🎯"
+            title="Persönliches Profil"
+            description="Finde deinen Hustle-Typ heraus"
+          />
+          <FeatureItem 
+            emoji="💼"
+            title="Business-Empfehlung"
+            description="Das perfekte Modell für dich"
+          />
+          <FeatureItem 
+            emoji="📝"
+            title="Action Plan"
+            description="Deine ersten konkreten Schritte"
+          />
+          <FeatureItem 
+            emoji="🤖"
+            title="AI Coach Style"
+            description="So wie du es brauchst"
+          />
+        </View>
+
+        {/* Time Estimate */}
+        <View style={styles.timeBox}>
+          <Ionicons name="time-outline" size={20} color={colors.text.secondary} />
+          <Text style={styles.timeText}>Dauert nur ~3 Minuten</Text>
+        </View>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.questionSection}>
-          <Text style={styles.question}>{question.question}</Text>
-          <Text style={styles.helperText}>Select one option to continue</Text>
-        </View>
-
-        <View style={styles.optionsContainer}>
-          {question.options.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[
-                styles.optionCard,
-                selectedOption === option.id && styles.optionCardSelected,
-              ]}
-              onPress={() => setSelectedOption(option.id)}
-              activeOpacity={0.7}
-            >
-              <View style={[
-                styles.optionIcon,
-                selectedOption === option.id && styles.optionIconSelected,
-              ]}>
-                <Ionicons 
-                  name={option.icon as keyof typeof Ionicons.glyphMap} 
-                  size={26} 
-                  color={selectedOption === option.id ? colors.text.inverse : colors.accent.primary} 
-                />
-              </View>
-              <Text style={[
-                styles.optionText,
-                selectedOption === option.id && styles.optionTextSelected,
-              ]}>
-                {option.text}
-              </Text>
-              {selectedOption === option.id && (
-                <Ionicons name="checkmark-circle" size={24} color={colors.accent.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
-      <View style={styles.ctaSection}>
-        <PrimaryButton 
-          title={currentQuestion < onboardingQuestions.length - 1 ? 'Continue' : 'Start Learning'}
-          onPress={handleContinue}
-          disabled={!selectedOption}
+      {/* Actions */}
+      <View style={styles.actions}>
+        <PrimaryButton
+          title="Survey starten"
+          onPress={() => router.push('/survey/1')}
         />
         <TouchableOpacity 
           style={styles.skipButton}
           onPress={() => router.replace('/(tabs)/dashboard')}
         >
-          <Text style={styles.skipText}>Skip for now</Text>
+          <Text style={styles.skipText}>Überspringen</Text>
         </TouchableOpacity>
       </View>
     </ScreenWrapper>
   );
 }
 
+const FeatureItem = ({ emoji, title, description }: { emoji: string; title: string; description: string }) => (
+  <View style={styles.featureItem}>
+    <Text style={styles.featureEmoji}>{emoji}</Text>
+    <View style={styles.featureText}>
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureDesc}>{description}</Text>
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
+  content: {
     flex: 1,
+    paddingTop: spacing.section,
   },
-  progressContainer: {
-    flexDirection: 'row',
+  hero: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+    marginBottom: spacing.section,
   },
-  progressTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: colors.background.tertiary,
+  iconContainer: {
+    width: 100,
+    height: 100,
     borderRadius: radius.full,
-    overflow: 'hidden',
+    backgroundColor: `${colors.accent.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xxl,
+    borderWidth: 2,
+    borderColor: `${colors.accent.primary}30`,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.accent.primary,
-    borderRadius: radius.full,
-  },
-  progressText: {
-    ...typography.smallMedium,
-    color: colors.text.secondary,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  questionSection: {
-    paddingTop: spacing.xxl,
-    marginBottom: spacing.xxxl,
-  },
-  question: {
+  title: {
     ...typography.h1,
     color: colors.text.primary,
+    textAlign: 'center',
   },
-  helperText: {
+  subtitle: {
     ...typography.body,
     color: colors.text.secondary,
+    textAlign: 'center',
     marginTop: spacing.md,
+    lineHeight: 24,
   },
-  optionsContainer: {
+  features: {
     gap: spacing.md,
   },
-  optionCard: {
+  featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
-  optionCardSelected: {
-    borderColor: colors.accent.primary,
-    backgroundColor: `${colors.accent.primary}10`,
-  },
-  optionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: `${colors.accent.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
+  featureEmoji: {
+    fontSize: 28,
     marginRight: spacing.lg,
   },
-  optionIconSelected: {
-    backgroundColor: colors.accent.primary,
-  },
-  optionText: {
+  featureText: {
     flex: 1,
+  },
+  featureTitle: {
     ...typography.bodyMedium,
     color: colors.text.primary,
   },
-  optionTextSelected: {
-    color: colors.accent.primary,
+  featureDesc: {
+    ...typography.small,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
   },
-  ctaSection: {
-    paddingHorizontal: spacing.lg,
+  timeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xxl,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: radius.full,
+  },
+  timeText: {
+    ...typography.smallMedium,
+    color: colors.text.secondary,
+  },
+  actions: {
     paddingVertical: spacing.lg,
   },
   skipButton: {

@@ -2,10 +2,11 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '../src/theme';
+import { OnboardingProvider } from '../src/context/OnboardingContext';
 
 export default function RootLayout() {
   return (
-    <>
+    <OnboardingProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -19,25 +20,27 @@ export default function RootLayout() {
         <Stack.Screen name="signup" />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="onboarding" />
+        <Stack.Screen name="survey/[step]" />
+        <Stack.Screen name="survey/result" options={{ animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="lesson/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="course/[id]" />
         <Stack.Screen name="challenge" />
         <Stack.Screen name="tasks" />
-        <Stack.Screen name="community" />
+        <Stack.Screen name="community/index" />
         <Stack.Screen name="community/post/[id]" />
         <Stack.Screen name="community/create" />
         <Stack.Screen name="community/user/[id]" />
         <Stack.Screen name="analytics" />
         <Stack.Screen name="badges" />
         <Stack.Screen name="badge/[id]" />
-        <Stack.Screen name="settings" />
+        <Stack.Screen name="settings/index" />
         <Stack.Screen name="settings/notifications" />
         <Stack.Screen name="settings/goals" />
         <Stack.Screen name="settings/privacy" />
         <Stack.Screen name="settings/help" />
         <Stack.Screen name="settings/about" />
       </Stack>
-    </>
+    </OnboardingProvider>
   );
 }
