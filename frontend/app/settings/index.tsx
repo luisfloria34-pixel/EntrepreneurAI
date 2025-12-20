@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, AppHeader, ListItem } from '../src/components';
-import { colors, spacing, radius } from '../src/theme';
+import { ScreenWrapper, AppHeader, ListItem } from '../../src/components';
+import { colors, spacing, radius } from '../../src/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
