@@ -14,6 +14,8 @@ interface TextInputProps {
   error?: string;
   style?: ViewStyle;
   leftIcon?: keyof typeof Ionicons.glyphMap;
+  multiline?: boolean;
+  numberOfLines?: number;
 }
 
 export const TextInput: React.FC<TextInputProps> = ({
@@ -27,6 +29,8 @@ export const TextInput: React.FC<TextInputProps> = ({
   error,
   style,
   leftIcon,
+  multiline = false,
+  numberOfLines = 1,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -39,6 +43,7 @@ export const TextInput: React.FC<TextInputProps> = ({
           styles.inputContainer,
           isFocused && styles.inputFocused,
           error && styles.inputError,
+          multiline && styles.multiline,
         ]}
       >
         {leftIcon && (
@@ -50,9 +55,9 @@ export const TextInput: React.FC<TextInputProps> = ({
           />
         )}
         <RNTextInput
-          style={styles.input}
+          style={[styles.input, multiline && styles.inputMultiline]}
           placeholder={placeholder}
-          placeholderTextColor={colors.text.tertiary}
+          placeholderTextColor={colors.text.muted}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
@@ -60,11 +65,15 @@ export const TextInput: React.FC<TextInputProps> = ({
           autoCapitalize={autoCapitalize}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          textAlignVertical={multiline ? 'top' : 'center'}
         />
         {secureTextEntry && (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             style={styles.eyeIcon}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
@@ -81,11 +90,10 @@ export const TextInput: React.FC<TextInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
+    ...typography.smallMedium,
     color: colors.text.secondary,
     marginBottom: spacing.sm,
   },
@@ -96,7 +104,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: 'transparent',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    minHeight: 52,
+  },
+  multiline: {
+    minHeight: 100,
+    alignItems: 'flex-start',
+    paddingVertical: spacing.md,
   },
   inputFocused: {
     borderColor: colors.accent.primary,
@@ -106,20 +120,23 @@ const styles = StyleSheet.create({
     borderColor: colors.semantic.error,
   },
   leftIcon: {
-    marginRight: spacing.sm,
+    marginRight: spacing.md,
   },
   input: {
     flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: typography.fontSize.md,
+    ...typography.body,
     color: colors.text.primary,
+    paddingVertical: spacing.md,
+  },
+  inputMultiline: {
+    paddingVertical: 0,
   },
   eyeIcon: {
     padding: spacing.xs,
   },
   errorText: {
-    fontSize: typography.fontSize.xs,
+    ...typography.caption,
     color: colors.semantic.error,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
 });

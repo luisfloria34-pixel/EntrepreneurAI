@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { colors, spacing, typography, radius } from '../theme';
 
 interface ProgressBarProps {
-  progress: number; // 0 to 100
+  progress: number;
   label?: string;
   showPercentage?: boolean;
   style?: ViewStyle;
@@ -16,7 +16,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   label,
   showPercentage = true,
   style,
-  height = 8,
+  height = 6,
   color = colors.accent.primary,
 }) => {
   const clampedProgress = Math.min(Math.max(progress, 0), 100);
@@ -27,7 +27,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         <View style={styles.labelContainer}>
           {label && <Text style={styles.label}>{label}</Text>}
           {showPercentage && (
-            <Text style={styles.percentage}>{Math.round(clampedProgress)}%</Text>
+            <Text style={[styles.percentage, { color }]}>{Math.round(clampedProgress)}%</Text>
           )}
         </View>
       )}
@@ -56,13 +56,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   label: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
   },
   percentage: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.accent.primary,
+    ...typography.smallMedium,
   },
   track: {
     backgroundColor: colors.background.tertiary,

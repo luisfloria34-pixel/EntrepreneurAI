@@ -12,6 +12,7 @@ interface ListItemProps {
   onPress?: () => void;
   style?: ViewStyle;
   showDivider?: boolean;
+  iconColor?: string;
 }
 
 export const ListItem: React.FC<ListItemProps> = ({
@@ -23,6 +24,7 @@ export const ListItem: React.FC<ListItemProps> = ({
   onPress,
   style,
   showDivider = true,
+  iconColor = colors.text.secondary,
 }) => {
   return (
     <TouchableOpacity
@@ -33,7 +35,7 @@ export const ListItem: React.FC<ListItemProps> = ({
     >
       {leftIcon && (
         <View style={styles.leftIconContainer}>
-          <Ionicons name={leftIcon} size={22} color={colors.text.secondary} />
+          <Ionicons name={leftIcon} size={22} color={iconColor} />
         </View>
       )}
       <View style={[styles.content, showDivider && styles.divider]}>
@@ -56,7 +58,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    minHeight: 56,
   },
   leftIconContainer: {
     width: 40,
@@ -71,7 +73,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.lg,
   },
   divider: {
     borderBottomWidth: 1,
@@ -81,12 +83,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
+    ...typography.body,
     color: colors.text.primary,
   },
   subtitle: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rightText: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.tertiary,
     marginRight: spacing.sm,
   },

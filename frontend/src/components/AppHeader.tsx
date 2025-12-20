@@ -10,6 +10,7 @@ interface AppHeaderProps {
   onBack?: () => void;
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightPress?: () => void;
+  large?: boolean;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -19,26 +20,27 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onBack,
   rightIcon,
   onRightPress,
+  large = false,
 }) => {
   return (
     <View style={styles.container}>
       <View style={styles.leftContainer}>
         {showBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <TouchableOpacity style={styles.backButton} onPress={onBack} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
         )}
       </View>
       
-      <View style={styles.centerContainer}>
-        {title && <Text style={styles.title}>{title}</Text>}
+      <View style={[styles.centerContainer, large && styles.centerLarge]}>
+        {title && <Text style={[styles.title, large && styles.titleLarge]}>{title}</Text>}
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
       
       <View style={styles.rightContainer}>
         {rightIcon && (
-          <TouchableOpacity style={styles.iconButton} onPress={onRightPress}>
-            <Ionicons name={rightIcon} size={24} color={colors.text.primary} />
+          <TouchableOpacity style={styles.iconButton} onPress={onRightPress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name={rightIcon} size={22} color={colors.text.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -52,7 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
+    minHeight: 56,
   },
   leftContainer: {
     width: 44,
@@ -61,6 +63,10 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     alignItems: 'center',
+  },
+  centerLarge: {
+    alignItems: 'flex-start',
+    marginLeft: spacing.sm,
   },
   rightContainer: {
     width: 44,
@@ -83,12 +89,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.h3,
     color: colors.text.primary,
   },
+  titleLarge: {
+    ...typography.h1,
+  },
   subtitle: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },

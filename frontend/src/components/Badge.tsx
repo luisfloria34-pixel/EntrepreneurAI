@@ -6,7 +6,7 @@ import { colors, spacing, typography, radius } from '../theme';
 interface BadgeProps {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'purple';
   size?: 'small' | 'medium';
   style?: ViewStyle;
 }
@@ -24,6 +24,7 @@ export const Badge: React.FC<BadgeProps> = ({
     warning: { bg: `${colors.semantic.warning}20`, text: colors.semantic.warning },
     error: { bg: `${colors.semantic.error}20`, text: colors.semantic.error },
     info: { bg: `${colors.semantic.info}20`, text: colors.semantic.info },
+    purple: { bg: `${colors.semantic.purple}20`, text: colors.semantic.purple },
   };
 
   const sizeStyles = {
@@ -31,8 +32,7 @@ export const Badge: React.FC<BadgeProps> = ({
     medium: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   };
 
-  const iconSize = size === 'small' ? 12 : 16;
-  const fontSize = size === 'small' ? typography.fontSize.xs : typography.fontSize.sm;
+  const iconSize = size === 'small' ? 12 : 14;
 
   return (
     <View
@@ -51,7 +51,10 @@ export const Badge: React.FC<BadgeProps> = ({
           style={styles.icon}
         />
       )}
-      <Text style={[styles.label, { color: variantColors[variant].text, fontSize }]}>
+      <Text style={[
+        size === 'small' ? styles.labelSmall : styles.label,
+        { color: variantColors[variant].text }
+      ]}>
         {label}
       </Text>
     </View>
@@ -69,6 +72,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   label: {
-    fontWeight: typography.fontWeight.medium,
+    ...typography.smallMedium,
+  },
+  labelSmall: {
+    ...typography.captionMedium,
   },
 });

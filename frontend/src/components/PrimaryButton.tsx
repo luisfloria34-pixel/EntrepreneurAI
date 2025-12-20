@@ -20,9 +20,9 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   size = 'large',
 }) => {
   const sizeStyles = {
-    small: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-    medium: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-    large: { paddingVertical: spacing.md + 2, paddingHorizontal: spacing.xl },
+    small: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+    medium: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
+    large: { paddingVertical: spacing.lg, paddingHorizontal: spacing.xxl },
   };
 
   return (
@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 52,
     ...shadows.glow,
   },
   disabled: {
@@ -59,8 +60,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   text: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.bodyMedium,
     color: colors.text.inverse,
   },
   textDisabled: {

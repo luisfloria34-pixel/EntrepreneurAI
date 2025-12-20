@@ -12,6 +12,7 @@ interface CardProps {
   onPress?: () => void;
   style?: ViewStyle;
   variant?: 'default' | 'elevated' | 'outlined';
+  showChevron?: boolean;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -23,10 +24,11 @@ export const Card: React.FC<CardProps> = ({
   onPress,
   style,
   variant = 'default',
+  showChevron = false,
 }) => {
   const variantStyles = {
     default: styles.default,
-    elevated: [styles.elevated, shadows.md],
+    elevated: [styles.elevated, shadows.sm],
     outlined: styles.outlined,
   };
 
@@ -36,20 +38,20 @@ export const Card: React.FC<CardProps> = ({
     <Container
       style={[styles.card, variantStyles[variant], style]}
       onPress={onPress}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
     >
       {(icon || title || subtitle) && (
         <View style={styles.header}>
           {icon && (
             <View style={[styles.iconContainer, { backgroundColor: `${iconColor}15` }]}>
-              <Ionicons name={icon} size={24} color={iconColor} />
+              <Ionicons name={icon} size={22} color={iconColor} />
             </View>
           )}
           <View style={styles.textContainer}>
-            {title && <Text style={styles.title}>{title}</Text>}
-            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+            {title && <Text style={styles.title} numberOfLines={1}>{title}</Text>}
+            {subtitle && <Text style={styles.subtitle} numberOfLines={2}>{subtitle}</Text>}
           </View>
-          {onPress && (
+          {(onPress || showChevron) && (
             <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
           )}
         </View>
@@ -63,7 +65,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   default: {},
   elevated: {
@@ -88,14 +90,14 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    marginRight: spacing.sm,
   },
   title: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semiBold,
+    ...typography.bodyMedium,
     color: colors.text.primary,
   },
   subtitle: {
-    fontSize: typography.fontSize.sm,
+    ...typography.small,
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },

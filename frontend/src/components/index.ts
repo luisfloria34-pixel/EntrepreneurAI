@@ -7,3 +7,5 @@ export { Card } from './Card';
 export { ProgressBar } from './ProgressBar';
 export { Badge } from './Badge';
 export { ListItem } from './ListItem';
+export { SectionHeader } from './SectionHeader';
+export { EmptyState } from './EmptyState';
