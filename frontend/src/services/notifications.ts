@@ -30,7 +30,7 @@ export async function scheduleDailyReminder(): Promise<void> {
       title: 'Time to hustle! 🔥',
       body: "Complete today's tasks and keep your streak alive.",
     },
-    trigger: { hour: 9, minute: 0, repeats: true } as any,
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: 9, minute: 0 },
   });
 }
 
@@ -42,7 +42,7 @@ export async function scheduleStreakReminder(): Promise<void> {
       title: "Don't break your streak! 💪",
       body: 'You still have time to complete a task today.',
     },
-    trigger: { hour: 20, minute: 0, repeats: true } as any,
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: 20, minute: 0 },
   });
 }
 
