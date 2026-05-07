@@ -6,7 +6,28 @@ import { colors, spacing, typography, radius, shadows } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useDailyTasks } from '../../src/hooks/useDailyTasks';
+import { getIsPro } from '../../src/services/proStatus';
 import * as Haptics from 'expo-haptics';
+
+function getTimeGreeting(hour: number): string {
+  if (hour >= 5 && hour < 9)  return 'Rise & Grind,';
+  if (hour >= 9 && hour < 12) return 'Good Morning,';
+  if (hour >= 12 && hour < 14) return 'Good Afternoon,';
+  if (hour >= 14 && hour < 18) return 'Keep Pushing,';
+  if (hour >= 18 && hour < 21) return 'Good Evening,';
+  if (hour >= 21)              return 'Still Hustling,';
+  return 'Midnight Grind,';
+}
+
+function getTimeSubtitle(hour: number): string {
+  if (hour >= 5 && hour < 9)  return 'Early birds catch the deals 🐦';
+  if (hour >= 9 && hour < 12) return "Let's make today count 🔥";
+  if (hour >= 12 && hour < 14) return 'Halfway through, keep going 💪';
+  if (hour >= 14 && hour < 18) return 'Afternoon grind hits different ⚡';
+  if (hour >= 18 && hour < 21) return 'Evening session, you showed up 🎯';
+  if (hour >= 21)              return 'Night owls build empires 🦉';
+  return 'While they sleep, you build 🌙';
+}
 
 const QUICK_ACTIONS = [
   { id: '1', title: 'Challenge', icon: 'flash', color: '#F59E0B', route: '/challenge' },
@@ -27,6 +48,9 @@ export default function DashboardScreen() {
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { tasks, loading: tasksLoading, toggleTask } = useDailyTasks();
   const [refreshing, setRefreshing] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
+  React.useEffect(() => { getIsPro().then(setIsPro); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -34,21 +58,36 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, [refetchProfile]);
 
+  const hour = new Date().getHours();
+  const greeting = getTimeGreeting(hour);
+  const subtitle = getTimeSubtitle(hour);
+
   const hustleScore = profile?.hustle_score ?? 0;
   const level = profile?.level ?? 1;
   const streak = profile?.streak ?? 0;
   const firstName = profile?.name?.split(' ')[0] ?? 'there';
+  // Pro title: "FirstName Closer ⚡", free: "FirstName 👋"
+  const displayName = isPro ? `${firstName} Closer ⚡` : `${firstName} 👋`;
 
   return (
     <ScreenWrapper scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good morning,</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>{greeting}</Text>
           {profileLoading ? (
             <View style={styles.skeletonName} />
           ) : (
-            <Text style={styles.userName}>{firstName}</Text>
+            <>
+              <Text style={styles.userName}>
+                <Text style={styles.userNameFirst}>{firstName} </Text>
+                {isPro
+                  ? <Text style={styles.userNamePro}>Closer ⚡</Text>
+                  : <Text style={styles.userNameEmoji}>👋</Text>
+                }
+              </Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            </>
           )}
         </View>
         <TouchableOpacity
@@ -177,13 +216,32 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingTop: spacing.lg,
   },
+  headerLeft: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
   greeting: {
     ...typography.body,
     color: colors.text.secondary,
   },
   userName: {
     ...typography.h1,
+    marginTop: spacing.xs,
+  },
+  userNameFirst: {
     color: colors.text.primary,
+    fontWeight: '700',
+  },
+  userNamePro: {
+    color: colors.accent.primary,
+    fontWeight: '700',
+  },
+  userNameEmoji: {
+    color: colors.text.primary,
+  },
+  subtitle: {
+    ...typography.small,
+    color: colors.text.tertiary,
     marginTop: spacing.xs,
   },
   skeletonName: {
