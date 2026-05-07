@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput as RNTextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput as RNTextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { aiChatMessages, quickPrompts, suggestedPrompts } from '../../src/data/dummyData';
+import { sendMessage } from '../../src/services/groq';
 
 type Message = {
   id: string;
@@ -16,30 +17,46 @@ export default function CoachScreen() {
   const [messages, setMessages] = useState<Message[]>(aiChatMessages);
   const [inputText, setInputText] = useState('');
   const [showPrompts, setShowPrompts] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const handleSend = async () => {
+    if (!inputText.trim() || isTyping) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputText,
+      content: inputText.trim(),
       timestamp: new Date(),
     };
-    setMessages([...messages, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputText('');
+    setIsTyping(true);
+    scrollRef.current?.scrollToEnd({ animated: true });
 
-    setTimeout(() => {
+    try {
+      const history = updatedMessages.map(({ role, content }) => ({ role, content }));
+      const reply = await sendMessage(history);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "That's a great question! As your AI business coach, I'd recommend starting by identifying your target market and understanding their specific pain points. Would you like me to walk you through a quick market research exercise?",
+        content: reply,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiResponse]);
+    } catch {
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, I had trouble connecting. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
       scrollRef.current?.scrollToEnd({ animated: true });
-    }, 1000);
+    }
   };
 
   return (
@@ -116,6 +133,16 @@ export default function CoachScreen() {
                 </View>
               </View>
             ))}
+            {isTyping && (
+              <View style={[styles.messageBubble, styles.assistantBubble]}>
+                <View style={styles.aiAvatar}>
+                  <Ionicons name="sparkles" size={16} color={colors.accent.primary} />
+                </View>
+                <View style={[styles.messageContent, styles.assistantContent, styles.typingBubble]}>
+                  <ActivityIndicator size="small" color={colors.accent.primary} />
+                </View>
+              </View>
+            )}
           </ScrollView>
         )}
 
@@ -150,19 +177,23 @@ export default function CoachScreen() {
               multiline
               maxLength={500}
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.sendButton,
-                !inputText.trim() && styles.sendButtonDisabled,
+                (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
               ]}
               onPress={handleSend}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || isTyping}
             >
-              <Ionicons 
-                name="send" 
-                size={20} 
-                color={inputText.trim() ? colors.text.inverse : colors.text.tertiary} 
-              />
+              {isTyping ? (
+                <ActivityIndicator size="small" color={colors.text.tertiary} />
+              ) : (
+                <Ionicons
+                  name="send"
+                  size={20}
+                  color={inputText.trim() ? colors.text.inverse : colors.text.tertiary}
+                />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -324,5 +355,9 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: colors.background.elevated,
+  },
+  typingBubble: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
   },
 });
