@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Share, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, PrimaryButton, SecondaryButton, ResultCard, SummaryRow } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
@@ -9,17 +9,27 @@ import { HustleProfile } from '../../src/data/surveyData';
 
 export default function SurveyResultScreen() {
   const router = useRouter();
-  const { calculateProfile, profile: existingProfile, setCompleted } = useOnboarding();
+  const { calculateProfile, profile: existingProfile, setCompleted, saveToSupabase } = useOnboarding();
   const [profile, setProfile] = useState<HustleProfile | null>(existingProfile);
+  const [isSaving, setIsSaving] = useState(false);
   const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
-    if (!existingProfile) {
-      const newProfile = calculateProfile();
-      setProfile(newProfile);
-    }
-    // Mark onboarding as completed
-    setCompleted(true);
+    const finalize = async () => {
+      const calculated = existingProfile ?? calculateProfile();
+      if (!existingProfile) setProfile(calculated);
+
+      setIsSaving(true);
+      const { error } = await saveToSupabase(calculated);
+      setIsSaving(false);
+
+      if (error) {
+        Alert.alert('Speichern fehlgeschlagen', 'Dein Profil konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      } else {
+        setCompleted(true);
+      }
+    };
+    finalize();
   }, []);
 
   if (!profile) {
@@ -31,6 +41,7 @@ export default function SurveyResultScreen() {
           </View>
           <Text style={styles.loadingText}>Analysiere deine Antworten...</Text>
           <Text style={styles.loadingSubtext}>Dein Hustle-Profil wird erstellt</Text>
+          <ActivityIndicator color={colors.accent.primary} style={{ marginTop: spacing.lg }} />
         </View>
       </ScreenWrapper>
     );
@@ -210,8 +221,9 @@ export default function SurveyResultScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         <PrimaryButton
-          title="Zum Dashboard"
+          title={isSaving ? 'Wird gespeichert...' : 'Zum Dashboard'}
           onPress={handleGoToDashboard}
+          disabled={isSaving}
         />
       </View>
     </ScreenWrapper>

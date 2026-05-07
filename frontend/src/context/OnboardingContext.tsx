@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OnboardingAnswers, HustleProfile, hustleTypes, businessModels } from '../data/surveyData';
+import { supabase } from '../services/supabase';
+import { useAuth } from './AuthContext';
 
 const STORAGE_KEYS = {
   ANSWERS: '@entrepreneurai_onboarding_answers',
@@ -14,6 +16,7 @@ interface OnboardingContextType {
   setAnswer: (questionId: string, answer: string | string[]) => void;
   profile: HustleProfile | null;
   calculateProfile: () => HustleProfile;
+  saveToSupabase: (calculatedProfile: HustleProfile) => Promise<{ error: Error | null }>;
   resetOnboarding: () => void;
   currentStep: number;
   setCurrentStep: (step: number) => void;
@@ -25,6 +28,7 @@ interface OnboardingContextType {
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
 
 export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<OnboardingAnswers>({});
   const [profile, setProfile] = useState<HustleProfile | null>(null);
   const [currentStep, setCurrentStepState] = useState<number>(1);
@@ -372,6 +376,40 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
     return calculatedProfile;
   };
 
+  const saveToSupabase = async (calculatedProfile: HustleProfile): Promise<{ error: Error | null }> => {
+    if (!user) return { error: new Error('Not authenticated') };
+    try {
+      const goals = answers.goal ? [answers.goal as string] : [];
+      const interests = (answers.interests as string[]) || [];
+
+      const { error: insertError } = await supabase
+        .from('onboarding_answers')
+        .insert({
+          user_id: user.id,
+          goals,
+          experience_level: (answers.experience as string) || null,
+          business_stage: (answers.situation as string) || null,
+          weekly_time: (answers.time as string) || null,
+          interests,
+        });
+
+      if (insertError) return { error: insertError };
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          onboarding_complete: true,
+          hustle_score: calculatedProfile.hustleScore,
+        })
+        .eq('id', user.id);
+
+      if (profileError) return { error: profileError };
+      return { error: null };
+    } catch (e) {
+      return { error: e as Error };
+    }
+  };
+
   const resetOnboarding = async () => {
     setAnswers({});
     setProfile(null);
@@ -390,11 +428,12 @@ export const OnboardingProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   return (
-    <OnboardingContext.Provider value={{ 
-      answers, 
-      setAnswer, 
-      profile, 
-      calculateProfile, 
+    <OnboardingContext.Provider value={{
+      answers,
+      setAnswer,
+      profile,
+      calculateProfile,
+      saveToSupabase,
       resetOnboarding,
       currentStep,
       setCurrentStep,
