@@ -1,99 +1,136 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { courses } from '../../src/data/dummyData';
+import { useCourses, CourseWithProgress } from '../../src/hooks/useCourses';
 
 export default function CoursesScreen() {
   const router = useRouter();
-  const inProgress = courses.filter(c => c.progress > 0 && c.progress < 100);
-  const available = courses.filter(c => c.progress === 0);
+  const { inProgress, available, loading } = useCourses();
 
   return (
     <ScreenWrapper scroll>
-      <AppHeader 
-        title="Courses" 
+      <AppHeader
+        title="Courses"
         subtitle="Master entrepreneurship skills"
         large
       />
-      
-      {/* In Progress */}
-      {inProgress.length > 0 && (
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.accent.primary} />
+        </View>
+      ) : (
         <>
-          <SectionHeader title="In Progress" />
-          {inProgress.map((course) => (
-            <CourseCard 
-              key={course.id} 
-              course={course} 
-              onPress={() => router.push(`/course/${course.id}`)} 
-            />
-          ))}
+          {inProgress.length > 0 && (
+            <>
+              <SectionHeader title="In Progress" />
+              {inProgress.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onPress={() => router.push(`/course/${course.id}`)}
+                />
+              ))}
+            </>
+          )}
+
+          <SectionHeader title="Available Courses" />
+          {available.length === 0 && inProgress.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No courses available yet.</Text>
+            </View>
+          ) : available.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>All courses in progress!</Text>
+            </View>
+          ) : (
+            available.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                onPress={() => router.push(`/course/${course.id}`)}
+              />
+            ))
+          )}
         </>
       )}
-
-      {/* Available */}
-      <SectionHeader title="Available Courses" />
-      {available.map((course) => (
-        <CourseCard 
-          key={course.id} 
-          course={course} 
-          onPress={() => router.push(`/course/${course.id}`)} 
-        />
-      ))}
     </ScreenWrapper>
   );
 }
 
-interface CourseCardProps {
-  course: typeof courses[0];
-  onPress: () => void;
-}
+const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void }> = ({
+  course,
+  onPress,
+}) => {
+  const color = course.icon_color ?? colors.accent.primary;
+  const icon = (course.icon ?? 'book') as keyof typeof Ionicons.glyphMap;
 
-const CourseCard: React.FC<CourseCardProps> = ({ course, onPress }) => (
-  <TouchableOpacity style={styles.courseCard} onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.courseHeader}>
-      <View style={[styles.courseIcon, { backgroundColor: `${course.color}20` }]}>
-        <Ionicons name={course.icon as keyof typeof Ionicons.glyphMap} size={26} color={course.color} />
-      </View>
-      <View style={styles.courseInfo}>
-        <Text style={styles.courseTitle}>{course.title}</Text>
-        <View style={styles.courseMeta}>
-          <Badge label={course.level} size="small" />
-          <Text style={styles.metaText}>{course.totalLessons} lessons</Text>
-          <Text style={styles.metaText}>{course.duration}</Text>
+  return (
+    <TouchableOpacity style={styles.courseCard} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.courseHeader}>
+        <View style={[styles.courseIcon, { backgroundColor: `${color}20` }]}>
+          <Ionicons name={icon} size={26} color={color} />
+        </View>
+        <View style={styles.courseInfo}>
+          <Text style={styles.courseTitle}>{course.title}</Text>
+          <View style={styles.courseMeta}>
+            <Badge label={course.level} size="small" />
+            <Text style={styles.metaText}>{course.total_lessons} lessons</Text>
+            {course.duration ? <Text style={styles.metaText}>{course.duration}</Text> : null}
+          </View>
         </View>
       </View>
-    </View>
-    <Text style={styles.courseDescription} numberOfLines={2}>{course.description}</Text>
-    {course.progress > 0 && (
-      <ProgressBar 
-        progress={course.progress}
-        showPercentage
-        height={6}
-        color={course.color}
-        style={styles.progressBar}
-      />
-    )}
-    <View style={styles.courseFooter}>
-      <View style={styles.instructorInfo}>
-        <Ionicons name="person-circle" size={20} color={colors.text.tertiary} />
-        <Text style={styles.instructorName}>{course.instructor}</Text>
-        <View style={styles.rating}>
-          <Ionicons name="star" size={14} color="#F59E0B" />
-          <Text style={styles.ratingText}>{course.rating}</Text>
+
+      {course.description ? (
+        <Text style={styles.courseDescription} numberOfLines={2}>{course.description}</Text>
+      ) : null}
+
+      {course.progress > 0 && (
+        <ProgressBar
+          progress={course.progress}
+          showPercentage
+          height={6}
+          color={color}
+          style={styles.progressBar}
+        />
+      )}
+
+      <View style={styles.courseFooter}>
+        <View style={styles.instructorInfo}>
+          <Ionicons name="person-circle" size={20} color={colors.text.tertiary} />
+          <Text style={styles.instructorName}>{course.instructor ?? 'Instructor'}</Text>
+          {course.rating > 0 && (
+            <View style={styles.rating}>
+              <Ionicons name="star" size={14} color="#F59E0B" />
+              <Text style={styles.ratingText}>{course.rating}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.startButton}>
+          <Text style={styles.startText}>{course.progress > 0 ? 'Continue' : 'Start'}</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.accent.primary} />
         </View>
       </View>
-      <View style={styles.startButton}>
-        <Text style={styles.startText}>{course.progress > 0 ? 'Continue' : 'Start'}</Text>
-        <Ionicons name="arrow-forward" size={16} color={colors.accent.primary} />
-      </View>
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    paddingTop: spacing.section,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.text.tertiary,
+  },
   courseCard: {
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
