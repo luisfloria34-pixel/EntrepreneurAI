@@ -5,15 +5,15 @@ const groq = new Groq({
   dangerouslyAllowBrowser: true,
 });
 
-const SYSTEM_PROMPT = 'You are an expert entrepreneur coach. Give concise, actionable advice in 2-3 sentences max.';
+const SYSTEM_PROMPT =
+  'You are an expert entrepreneur and business coach. Give concise, actionable advice. Max 3 sentences per response. Focus on practical steps.';
 
-export async function sendMessage(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<string> {
+export async function sendMessage(
+  messages: { role: 'user' | 'assistant'; content: string }[]
+): Promise<string> {
   const completion = await groq.chat.completions.create({
     model: 'llama3-8b-8192',
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...messages,
-    ],
+    messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
   });
   return completion.choices[0]?.message?.content ?? '';
 }
