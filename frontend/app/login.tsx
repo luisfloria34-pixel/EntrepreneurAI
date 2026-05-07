@@ -115,22 +115,24 @@ export default function LoginScreen() {
 
               <View style={styles.altButtons}>
                 <TouchableOpacity
-                  style={styles.socialButton}
+                  style={styles.iconBtn}
                   onPress={handleGoogle}
                   disabled={googleLoading}
                 >
                   {googleLoading
                     ? <ActivityIndicator size="small" color={colors.text.primary} />
-                    : <Ionicons name="logo-google" size={22} color={colors.text.primary} />
-                  }
+                    : <Ionicons name="logo-google" size={22} color={colors.text.primary} />}
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.iconBtn}>
+                  <Ionicons name="logo-apple" size={24} color={colors.text.primary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.phoneButton}
+                  style={styles.iconBtn}
                   onPress={() => { setShowPhone(true); setError(''); }}
                 >
-                  <Ionicons name="call-outline" size={20} color={colors.accent.primary} />
-                  <Text style={styles.phoneButtonText}>Phone Number</Text>
+                  <Ionicons name="call" size={22} color={colors.text.primary} />
                 </TouchableOpacity>
               </View>
             </>
@@ -227,34 +229,17 @@ const styles = StyleSheet.create({
   },
   altButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.md,
   },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    backgroundColor: colors.background.tertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  phoneButton: {
+  iconBtn: {
     flex: 1,
     height: 56,
     borderRadius: radius.lg,
     backgroundColor: colors.background.tertiary,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border.default,
-  },
-  phoneButtonText: {
-    ...typography.bodyMedium,
-    color: colors.accent.primary,
   },
   backRow: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, TextInput } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
@@ -8,12 +8,21 @@ import { useAuth } from '../src/context/AuthContext';
 
 export default function SignupScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle, signInWithPhone } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogle = async () => {
+    setError('');
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (error) setError(error.message);
+  };
 
   const handleSignup = async () => {
     setError('');
@@ -78,11 +87,16 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.socialButtons}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-google" size={22} color={colors.text.primary} />
+            <TouchableOpacity style={styles.iconBtn} onPress={handleGoogle} disabled={googleLoading}>
+              {googleLoading
+                ? <ActivityIndicator size="small" color={colors.text.primary} />
+                : <Ionicons name="logo-google" size={22} color={colors.text.primary} />}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Ionicons name="logo-apple" size={22} color={colors.text.primary} />
+            <TouchableOpacity style={styles.iconBtn}>
+              <Ionicons name="logo-apple" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/login')}>
+              <Ionicons name="call" size={22} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -144,11 +158,10 @@ const styles = StyleSheet.create({
   },
   socialButtons: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
   },
-  socialButton: {
-    width: 56,
+  iconBtn: {
+    flex: 1,
     height: 56,
     borderRadius: radius.lg,
     backgroundColor: colors.background.tertiary,
