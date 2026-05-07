@@ -1,183 +1,137 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { profileData, settingsGroups } from '../../src/data/profileMock';
-import { useOnboarding } from '../../src/context/OnboardingContext';
+import { settingsGroups } from '../../src/data/profileMock';
+import { useProfile } from '../../src/hooks/useProfile';
+import { useProofs } from '../../src/hooks/useProofs';
+import { useBadges } from '../../src/hooks/useBadges';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile: hustleProfile } = useOnboarding();
-  
-  const earnedBadges = profileData.badges.filter(b => b.earned);
-  const lockedBadges = profileData.badges.filter(b => !b.earned);
-  const nextCertificate = profileData.certificates.find(c => c.status === 'in_progress');
+  const { signOut, user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const { proofs, loading: proofsLoading } = useProofs();
+  const { badges, earnedCount, loading: badgesLoading } = useBadges();
+
+  const name = profile?.name ?? user?.email?.split('@')[0] ?? 'User';
+  const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  const handle = `@${name.toLowerCase().replace(/\s+/g, '')}`;
+
+  const hustleScore = profile?.hustle_score ?? 0;
+  const streak = profile?.streak ?? 0;
+  const level = profile?.level ?? 1;
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out my progress on EntrepreneurAI! 🚀\n\n📊 Hustle Score: ${profileData.stats.hustleScore}\n🔥 ${profileData.stats.currentStreak} Day Streak\n🎓 ${profileData.stats.lessonsDone} Lessons Done\n\n@${profileData.handle}`,
+        message: `Check out my progress on EntrepreneurAI! 🚀\n\n📊 Hustle Score: ${hustleScore}\n🔥 ${streak} Day Streak\n\n${handle}`,
       });
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (_) {}
+  };
+
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
     <ScreenWrapper scroll>
-      {/* ===== A) PROFILE HEADER ===== */}
+      {/* ===== PROFILE HEADER ===== */}
       <View style={styles.headerSection}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {profileData.name.split(' ').map(n => n[0]).join('')}
-            </Text>
+            {profileLoading ? (
+              <ActivityIndicator color={colors.text.inverse} />
+            ) : (
+              <Text style={styles.avatarText}>{initials}</Text>
+            )}
           </View>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusEmoji}>{profileData.statusEmoji}</Text>
+            <Text style={styles.statusEmoji}>{streak > 0 ? '🔥' : '🚀'}</Text>
           </View>
         </View>
-        
-        <Text style={styles.userName}>{profileData.name}</Text>
-        <Text style={styles.userHandle}>{profileData.handle}</Text>
-        <Text style={styles.userBio}>{profileData.bio}</Text>
-        
-        <View style={styles.statusContainer}>
-          <Ionicons name="flame" size={14} color={colors.semantic.warning} />
-          <Text style={styles.statusText}>{profileData.statusText}</Text>
-        </View>
-        
-        {/* Header Buttons */}
+
+        <Text style={styles.userName}>{profileLoading ? '...' : name}</Text>
+        <Text style={styles.userHandle}>{handle}</Text>
+
+        {streak > 0 && (
+          <View style={styles.statusContainer}>
+            <Ionicons name="flame" size={14} color={colors.semantic.warning} />
+            <Text style={styles.statusText}>On a {streak}-day streak!</Text>
+          </View>
+        )}
+
         <View style={styles.headerButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.editButton}
             onPress={() => router.push('/settings/edit-profile')}
           >
             <Ionicons name="pencil" size={16} color={colors.text.primary} />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.shareButton}
-            onPress={handleShare}
-          >
+
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
             <Ionicons name="share-outline" size={16} color={colors.accent.primary} />
             <Text style={styles.shareButtonText}>Share</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ===== B) MISSION CARD ===== */}
-      <View style={styles.missionCard}>
-        <View style={styles.missionHeader}>
-          <View style={styles.missionIcon}>
-            <Ionicons name="flag" size={20} color={colors.accent.primary} />
-          </View>
-          <View style={styles.missionTitleContainer}>
-            <Text style={styles.missionLabel}>Current Mission</Text>
-            <Text style={styles.missionDeadline}>{profileData.mission.daysLeft} days left</Text>
-          </View>
-        </View>
-        
-        <Text style={styles.missionText}>{profileData.mission.text}</Text>
-        
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${profileData.mission.progress}%` }]} />
-          </View>
-          <Text style={styles.progressText}>{profileData.mission.progress}%</Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.missionButton}
-          onPress={() => router.push('/settings/goals')}
-        >
-          <Ionicons name="create-outline" size={16} color={colors.accent.primary} />
-          <Text style={styles.missionButtonText}>Update Goal</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ===== C) STATS GRID ===== */}
+      {/* ===== STATS GRID ===== */}
       <View style={styles.statsSection}>
-        <SectionHeader 
-          title="Your Stats" 
+        <SectionHeader
+          title="Your Stats"
           actionText="View Analytics"
           onAction={() => router.push('/analytics')}
         />
         <View style={styles.statsGrid}>
-          <StatCard 
-            value={hustleProfile?.hustleScore || profileData.stats.hustleScore} 
-            label="Hustle Score" 
-            icon="flash"
-            color={colors.accent.primary}
-          />
-          <StatCard 
-            value={profileData.stats.currentStreak} 
-            label="Day Streak" 
-            icon="flame"
-            color={colors.semantic.warning}
-          />
-          <StatCard 
-            value={profileData.stats.lessonsDone} 
-            label="Lessons Done" 
-            icon="book"
-            color={colors.semantic.success}
-          />
-          <StatCard 
-            value={profileData.stats.tasksDone} 
-            label="Tasks Done" 
-            icon="checkmark-circle"
-            color={colors.semantic.info}
-          />
-          <StatCard 
-            value={profileData.stats.proofsUploaded} 
-            label="Proofs" 
-            icon="camera"
-            color={colors.semantic.purple}
-          />
-          <StatCard 
-            value={profileData.stats.bestStreak} 
-            label="Best Streak" 
-            icon="trophy"
-            color="#EC4899"
-          />
+          <StatCard value={hustleScore} label="Hustle Score" icon="flash" color={colors.accent.primary} />
+          <StatCard value={streak} label="Day Streak" icon="flame" color={colors.semantic.warning} />
+          <StatCard value={level} label="Level" icon="ribbon" color={colors.semantic.purple} />
+          <StatCard value={0} label="Lessons Done" icon="book" color={colors.semantic.success} />
+          <StatCard value={0} label="Tasks Done" icon="checkmark-circle" color={colors.semantic.info} />
+          <StatCard value={proofs.length} label="Proofs" icon="camera" color="#EC4899" />
         </View>
       </View>
 
-      {/* ===== D) PORTFOLIO / PROOF-OF-WORK ===== */}
+      {/* ===== PROOF OF WORK ===== */}
       <View style={styles.proofSection}>
-        <SectionHeader 
-          title="Proof of Work" 
-          actionText={`${profileData.totalProofs} total`}
-          onAction={() => router.push('/proofs')}
+        <SectionHeader
+          title="Proof of Work"
+          actionText={proofs.length > 0 ? `${proofs.length} total` : undefined}
+          onAction={proofs.length > 0 ? () => router.push('/proofs') : undefined}
         />
         <View style={styles.proofCard}>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.proofScroll}
           >
-            {profileData.proofs.slice(0, 3).map((proof) => (
-              <TouchableOpacity 
-                key={proof.id} 
-                style={styles.proofThumbnail}
-                onPress={() => router.push('/proofs')}
-              >
-                <View style={styles.proofPlaceholder}>
-                  <Ionicons 
-                    name={proof.type === 'video' ? 'play-circle' : 'image'} 
-                    size={24} 
-                    color={colors.text.tertiary} 
-                  />
-                </View>
-                <Text style={styles.proofTitle} numberOfLines={1}>{proof.title}</Text>
-              </TouchableOpacity>
-            ))}
-            
-            {/* Upload Button */}
-            <TouchableOpacity 
+            {proofsLoading ? (
+              <View style={styles.proofLoadingContainer}>
+                <ActivityIndicator color={colors.accent.primary} />
+              </View>
+            ) : (
+              proofs.slice(0, 3).map((proof) => (
+                <TouchableOpacity
+                  key={proof.id}
+                  style={styles.proofThumbnail}
+                  onPress={() => router.push('/proofs')}
+                >
+                  <View style={styles.proofPlaceholder}>
+                    <Ionicons name="image" size={24} color={colors.text.tertiary} />
+                  </View>
+                  <Text style={styles.proofTitle} numberOfLines={1}>
+                    {proof.title ?? 'Proof'}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+
+            <TouchableOpacity
               style={styles.uploadThumbnail}
               onPress={() => router.push('/proof-upload')}
             >
@@ -190,99 +144,79 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ===== E) BADGES SECTION ===== */}
+      {/* ===== BADGES ===== */}
       <View style={styles.badgesSection}>
-        <SectionHeader 
-          title="Badges" 
-          actionText={`${earnedBadges.length} earned`}
+        <SectionHeader
+          title="Badges"
+          actionText={`${earnedCount} earned`}
           onAction={() => router.push('/badges')}
         />
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.badgesScroll}
-        >
-          {/* Earned Badges */}
-          {earnedBadges.map((badge) => (
-            <TouchableOpacity 
-              key={badge.id}
-              style={styles.badgeItem}
-              onPress={() => router.push(`/badge/${badge.id}`)}
-            >
-              <View style={[styles.badgeCircle, { backgroundColor: `${badge.color}20`, borderColor: badge.color }]}>
-                <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
-              </View>
-              <Text style={styles.badgeName} numberOfLines={1}>{badge.name}</Text>
-            </TouchableOpacity>
-          ))}
-          
-          {/* Locked Badges (show first 3) */}
-          {lockedBadges.slice(0, 3).map((badge) => (
-            <TouchableOpacity 
-              key={badge.id}
-              style={styles.badgeItem}
-              onPress={() => router.push('/badges')}
-            >
-              <View style={[styles.badgeCircle, styles.badgeLocked]}>
-                <Ionicons name="lock-closed" size={20} color={colors.text.muted} />
-              </View>
-              <Text style={[styles.badgeName, styles.badgeNameLocked]} numberOfLines={1}>{badge.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {badgesLoading ? (
+          <ActivityIndicator color={colors.accent.primary} style={{ marginVertical: spacing.lg }} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.badgesScroll}
+          >
+            {badges.map((badge) => (
+              <TouchableOpacity
+                key={badge.id}
+                style={styles.badgeItem}
+                onPress={() => router.push('/badges')}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.badgeCircle,
+                    badge.earned
+                      ? { backgroundColor: `${badge.color}20`, borderColor: badge.color }
+                      : styles.badgeLocked,
+                  ]}
+                >
+                  {badge.earned ? (
+                    <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.badgeEmojiLocked}>{badge.emoji}</Text>
+                      <View style={styles.lockOverlay}>
+                        <Ionicons name="lock-closed" size={12} color={colors.text.muted} />
+                      </View>
+                    </>
+                  )}
+                </View>
+                <Text style={[styles.badgeName, !badge.earned && styles.badgeNameLocked]} numberOfLines={1}>
+                  {badge.name}
+                </Text>
+                <Text style={styles.badgeDesc} numberOfLines={1}>
+                  {badge.earned ? 'Earned' : badge.description}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
-      {/* ===== F) CERTIFICATES CARD ===== */}
-      {nextCertificate && (
-        <View style={styles.certificateSection}>
-          <SectionHeader title="Certificates" />
-          <View style={styles.certificateCard}>
-            <View style={styles.certificateIcon}>
-              <Ionicons name="ribbon" size={28} color={colors.semantic.warning} />
-            </View>
-            <View style={styles.certificateInfo}>
-              <Text style={styles.certificateLabel}>Next Certificate</Text>
-              <Text style={styles.certificateName}>{nextCertificate.name}</Text>
-              <View style={styles.certificateProgress}>
-                <View style={styles.certProgressBar}>
-                  <View style={[styles.certProgressFill, { width: `${nextCertificate.progress}%` }]} />
-                </View>
-                <Text style={styles.certProgressText}>
-                  {nextCertificate.lessonsLeft} lessons left
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.continueButton}
-              onPress={() => router.push(`/course/${nextCertificate.courseId}`)}
-            >
-              <Text style={styles.continueText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* ===== G) SETTINGS LIST ===== */}
+      {/* ===== SETTINGS LIST ===== */}
       <View style={styles.settingsSection}>
-        {settingsGroups.map((group, groupIndex) => (
+        {settingsGroups.map((group) => (
           <View key={group.title} style={styles.settingsGroup}>
             <Text style={styles.settingsGroupTitle}>{group.title}</Text>
             <View style={styles.settingsCard}>
               {group.items.map((item, itemIndex) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={item.id}
                   style={[
                     styles.settingsItem,
-                    itemIndex < group.items.length - 1 && styles.settingsItemBorder
+                    itemIndex < group.items.length - 1 && styles.settingsItemBorder,
                   ]}
                   onPress={() => router.push(item.route as any)}
                 >
                   <View style={styles.settingsItemLeft}>
-                    <Ionicons 
-                      name={item.icon as keyof typeof Ionicons.glyphMap} 
-                      size={20} 
-                      color={colors.text.secondary} 
+                    <Ionicons
+                      name={item.icon as keyof typeof Ionicons.glyphMap}
+                      size={20}
+                      color={colors.text.secondary}
                     />
                     <Text style={styles.settingsItemText}>{item.title}</Text>
                   </View>
@@ -295,10 +229,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Logout */}
-      <TouchableOpacity 
-        style={styles.logoutButton}
-        onPress={() => router.replace('/')}
-      >
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color={colors.semantic.error} />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
@@ -308,8 +239,17 @@ export default function ProfileScreen() {
   );
 }
 
-// Stat Card Component
-const StatCard = ({ value, label, icon, color }: { value: number; label: string; icon: string; color: string }) => (
+const StatCard = ({
+  value,
+  label,
+  icon,
+  color,
+}: {
+  value: number;
+  label: string;
+  icon: string;
+  color: string;
+}) => (
   <View style={styles.statCard}>
     <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
       <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={18} color={color} />
@@ -320,7 +260,6 @@ const StatCard = ({ value, label, icon, color }: { value: number; label: string;
 );
 
 const styles = StyleSheet.create({
-  // ===== HEADER SECTION =====
   headerSection: {
     alignItems: 'center',
     paddingTop: spacing.xxl,
@@ -372,13 +311,6 @@ const styles = StyleSheet.create({
     color: colors.accent.primary,
     marginTop: spacing.xs,
   },
-  userBio: {
-    ...typography.small,
-    color: colors.text.secondary,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -427,85 +359,6 @@ const styles = StyleSheet.create({
     color: colors.accent.primary,
   },
 
-  // ===== MISSION CARD =====
-  missionCard: {
-    backgroundColor: colors.background.card,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    marginBottom: spacing.xxl,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  missionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  missionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: `${colors.accent.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  missionTitleContainer: {
-    flex: 1,
-  },
-  missionLabel: {
-    ...typography.smallMedium,
-    color: colors.text.secondary,
-  },
-  missionDeadline: {
-    ...typography.caption,
-    color: colors.semantic.warning,
-    marginTop: spacing.xs,
-  },
-  missionText: {
-    ...typography.body,
-    color: colors.text.primary,
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.accent.primary,
-    borderRadius: radius.full,
-  },
-  progressText: {
-    ...typography.captionMedium,
-    color: colors.accent.primary,
-    minWidth: 40,
-  },
-  missionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: `${colors.accent.primary}10`,
-  },
-  missionButtonText: {
-    ...typography.smallMedium,
-    color: colors.accent.primary,
-  },
-
-  // ===== STATS SECTION =====
   statsSection: {
     marginBottom: spacing.xxl,
   },
@@ -539,7 +392,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ===== PROOF SECTION =====
   proofSection: {
     marginBottom: spacing.xxl,
   },
@@ -550,6 +402,12 @@ const styles = StyleSheet.create({
   },
   proofScroll: {
     gap: spacing.md,
+  },
+  proofLoadingContainer: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   proofThumbnail: {
     alignItems: 'center',
@@ -590,7 +448,6 @@ const styles = StyleSheet.create({
     color: colors.accent.primary,
   },
 
-  // ===== BADGES SECTION =====
   badgesSection: {
     marginBottom: spacing.xxl,
   },
@@ -600,7 +457,7 @@ const styles = StyleSheet.create({
   },
   badgeItem: {
     alignItems: 'center',
-    width: 72,
+    width: 76,
   },
   badgeCircle: {
     width: 56,
@@ -610,6 +467,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
     borderWidth: 2,
+    position: 'relative',
   },
   badgeLocked: {
     backgroundColor: colors.background.tertiary,
@@ -617,6 +475,23 @@ const styles = StyleSheet.create({
   },
   badgeEmoji: {
     fontSize: 24,
+  },
+  badgeEmojiLocked: {
+    fontSize: 20,
+    opacity: 0.3,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: radius.full,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   badgeName: {
     ...typography.caption,
@@ -626,78 +501,14 @@ const styles = StyleSheet.create({
   badgeNameLocked: {
     color: colors.text.muted,
   },
-
-  // ===== CERTIFICATE SECTION =====
-  certificateSection: {
-    marginBottom: spacing.xxl,
-  },
-  certificateCard: {
-    backgroundColor: colors.background.card,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: `${colors.semantic.warning}30`,
-  },
-  certificateIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    backgroundColor: `${colors.semantic.warning}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  certificateInfo: {
-    flex: 1,
-  },
-  certificateLabel: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-  },
-  certificateName: {
-    ...typography.bodyMedium,
-    color: colors.text.primary,
-    marginTop: spacing.xs,
-  },
-  certificateProgress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  certProgressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: colors.background.tertiary,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  certProgressFill: {
-    height: '100%',
-    backgroundColor: colors.semantic.warning,
-    borderRadius: radius.full,
-  },
-  certProgressText: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-  },
-  continueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.semantic.warning,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    gap: spacing.xs,
-  },
-  continueText: {
-    ...typography.smallMedium,
-    color: colors.text.inverse,
+  badgeDesc: {
+    fontSize: 9,
+    color: colors.text.muted,
+    textAlign: 'center',
+    marginTop: 2,
+    lineHeight: 12,
   },
 
-  // ===== SETTINGS SECTION =====
   settingsSection: {
     marginBottom: spacing.lg,
   },
@@ -737,7 +548,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
 
-  // ===== LOGOUT & VERSION =====
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
