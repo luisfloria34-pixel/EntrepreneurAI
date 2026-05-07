@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '../src/theme';
@@ -20,6 +20,7 @@ function RootLayoutNav() {
   const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const rcLoggedInUserId = useRef<string | null>(null);
 
   // Redirect based on session state whenever it changes
   useEffect(() => {
@@ -39,16 +40,22 @@ function RootLayoutNav() {
     initializePurchases();
   }, []);
 
+  function rcLogin(userId: string) {
+    if (rcLoggedInUserId.current === userId) return;
+    rcLoggedInUserId.current = userId;
+    loginUser(userId).catch(() => {});
+  }
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       if (event === 'SIGNED_OUT') {
         cancelAllNotifications();
+        rcLoggedInUserId.current = null;
         logoutUser();
         router.replace('/login');
       }
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && sess?.user) {
         checkAndUpdateStreak(sess.user.id);
-        loginUser(sess.user.id); // tie RevenueCat identity to Supabase user
       }
     });
     return () => subscription.unsubscribe();
@@ -63,7 +70,7 @@ function RootLayoutNav() {
       }
     });
     checkAndUpdateStreak(session.user.id);
-    loginUser(session.user.id);
+    rcLogin(session.user.id);
   }, [session?.user?.id]);
 
   // Block render until session is known — prevents flash of protected content
