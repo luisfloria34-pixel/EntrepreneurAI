@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Animated, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
@@ -16,23 +16,33 @@ export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from('profiles')
-      .select('name, email, avatar_url')
+      .select('name, bio, avatar_url')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.log('[EditProfile] load error:', error.message);
         if (data) {
           setName(data.name ?? '');
-          setBio('');
+          setBio(data.bio ?? '');
           setAvatarUri(data.avatar_url ?? null);
         }
         setLoading(false);
       });
   }, [user]);
+
+  function showToast() {
+    toastOpacity.setValue(1);
+    Animated.sequence([
+      Animated.delay(1500),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }
 
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
 
@@ -52,31 +62,41 @@ export default function EditProfileScreen() {
     if (!user || saving) return;
     setSaving(true);
     try {
-      let avatar_url = avatarUri;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: name.trim(), bio: bio.trim() })
+        .eq('id', user.id);
 
+      if (error) {
+        console.log('[EditProfile] save error:', error.message, error.code, error.details);
+        throw error;
+      }
+
+      // Upload avatar separately — non-blocking for the profile update
       if (avatarUri && avatarUri.startsWith('file')) {
-        const ext = avatarUri.split('.').pop() ?? 'jpg';
-        const filename = `${user.id}/avatar.${ext}`;
-        const response = await fetch(avatarUri);
-        const blob = await response.blob();
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filename, blob, { upsert: true, contentType: `image/${ext}` });
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filename);
-          avatar_url = urlData.publicUrl;
+        try {
+          const ext = avatarUri.split('.').pop() ?? 'jpg';
+          const filename = `${user.id}/avatar.${ext}`;
+          const response = await fetch(avatarUri);
+          const blob = await response.blob();
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filename, blob, { upsert: true, contentType: `image/${ext}` });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filename);
+            await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', user.id);
+          } else {
+            console.log('[EditProfile] avatar upload error:', uploadError.message);
+          }
+        } catch (uploadErr) {
+          console.log('[EditProfile] avatar upload exception:', uploadErr);
         }
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ name: name.trim(), avatar_url })
-        .eq('id', user.id);
-
-      if (error) throw error;
-      Alert.alert('Saved!', 'Your profile has been updated.', [{ text: 'OK', onPress: () => router.back() }]);
-    } catch {
-      Alert.alert('Error', 'Could not save profile. Please try again.');
+      showToast();
+      setTimeout(() => router.back(), 2000);
+    } catch (e: any) {
+      Alert.alert('Could not save profile', e?.message ?? 'Please try again.');
     } finally {
       setSaving(false);
     }
@@ -153,6 +173,12 @@ export default function EditProfileScreen() {
           <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={saving} />
         </View>
       </KeyboardAvoidingView>
+
+      {/* Success toast */}
+      <Animated.View style={[styles.toast, { opacity: toastOpacity }]} pointerEvents="none">
+        <Ionicons name="checkmark-circle" size={18} color={colors.text.inverse} />
+        <Text style={styles.toastText}>Profile saved!</Text>
+      </Animated.View>
     </ScreenWrapper>
   );
 }
@@ -189,4 +215,12 @@ const styles = StyleSheet.create({
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   charCount: { ...typography.caption, color: colors.text.muted, textAlign: 'right', marginTop: spacing.xs },
   footer: { paddingVertical: spacing.lg },
+  toast: {
+    position: 'absolute', bottom: 40, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.semantic.success,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    borderRadius: radius.full,
+  },
+  toastText: { ...typography.smallMedium, color: colors.text.inverse },
 });
