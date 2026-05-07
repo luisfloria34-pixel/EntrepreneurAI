@@ -35,7 +35,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow EntrepreneurAI to access your photos for the AI coach.",
+          "cameraPermission": "Allow EntrepreneurAI to use the camera for the AI coach."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
