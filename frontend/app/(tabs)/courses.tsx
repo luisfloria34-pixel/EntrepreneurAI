@@ -67,6 +67,7 @@ const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void }> 
 }) => {
   const color = course.icon_color ?? colors.accent.primary;
   const icon = (course.icon ?? 'book') as keyof typeof Ionicons.glyphMap;
+  const hasProgress = course.progress > 0;
 
   return (
     <TouchableOpacity style={styles.courseCard} onPress={onPress} activeOpacity={0.7}>
@@ -88,7 +89,7 @@ const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void }> 
         <Text style={styles.courseDescription} numberOfLines={2}>{course.description}</Text>
       ) : null}
 
-      {course.progress > 0 && (
+      {hasProgress && (
         <ProgressBar
           progress={course.progress}
           showPercentage
@@ -109,9 +110,15 @@ const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void }> 
             </View>
           )}
         </View>
-        <View style={styles.startButton}>
-          <Text style={styles.startText}>{course.progress > 0 ? 'Continue' : 'Start'}</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.accent.primary} />
+        <View style={[styles.startButton, hasProgress && styles.continueButton]}>
+          <Text style={[styles.startText, hasProgress && styles.continueText]}>
+            {hasProgress ? 'Continue' : 'Start Course'}
+          </Text>
+          <Ionicons
+            name="arrow-forward"
+            size={16}
+            color={hasProgress ? colors.text.inverse : colors.accent.primary}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -205,9 +212,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    backgroundColor: `${colors.accent.primary}15`,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.accent.primary,
+  },
+  continueButton: {
+    backgroundColor: colors.accent.primary,
+    borderColor: colors.accent.primary,
   },
   startText: {
     ...typography.smallMedium,
     color: colors.accent.primary,
+  },
+  continueText: {
+    color: colors.text.inverse,
   },
 });

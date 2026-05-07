@@ -38,6 +38,9 @@ export function useCourses() {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
+    console.log('[useCourses] courses:', JSON.stringify(coursesRes.data), 'error:', coursesRes.error?.message);
+    console.log('[useCourses] progress:', JSON.stringify(progressRes.data), 'error:', (progressRes as any).error?.message);
+
     const progressMap = new Map<string, { completed_lessons: number; progress: number }>(
       ((progressRes as any).data ?? []).map((p: any) => [
         p.course_id,
