@@ -4,14 +4,26 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, TextInput } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    router.replace('/(tabs)/dashboard');
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+    const { error } = await signIn(email, password);
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      router.replace('/(tabs)/dashboard');
+    }
   };
 
   return (
@@ -49,8 +61,10 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <PrimaryButton 
-            title="Sign In"
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+          <PrimaryButton
+            title={loading ? 'Signing In...' : 'Sign In'}
             onPress={handleLogin}
             style={styles.loginButton}
           />
@@ -111,6 +125,11 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     ...typography.smallMedium,
     color: colors.accent.primary,
+  },
+  errorText: {
+    ...typography.small,
+    color: '#FF4444',
+    marginBottom: spacing.sm,
   },
   loginButton: {
     marginTop: spacing.sm,

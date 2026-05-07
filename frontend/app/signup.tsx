@@ -4,15 +4,27 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, TextInput } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
-    router.push('/onboarding');
+  const handleSignup = async () => {
+    setError('');
+    setLoading(true);
+    const { error } = await signUp(email, password);
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+    } else {
+      router.push('/onboarding');
+    }
   };
 
   return (
@@ -51,8 +63,10 @@ export default function SignupScreen() {
             leftIcon="lock-closed-outline"
           />
 
-          <PrimaryButton 
-            title="Create Account"
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+          <PrimaryButton
+            title={loading ? 'Creating Account...' : 'Create Account'}
             onPress={handleSignup}
             style={styles.signupButton}
           />
@@ -104,6 +118,11 @@ const styles = StyleSheet.create({
   },
   formSection: {
     flex: 1,
+  },
+  errorText: {
+    ...typography.small,
+    color: '#FF4444',
+    marginBottom: spacing.sm,
   },
   signupButton: {
     marginTop: spacing.lg,
