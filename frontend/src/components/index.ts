@@ -14,3 +14,5 @@ export { MultiSelectChip } from './MultiSelectChip';
 export { ResultCard } from './ResultCard';
 export { SummaryRow } from './SummaryRow';
 export { SurveyHeader } from './SurveyHeader';
+export { StreakAnimation } from './StreakAnimation';
+export { XPAnimation } from './XPAnimation';

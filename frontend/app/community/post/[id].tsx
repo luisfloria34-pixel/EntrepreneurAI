@@ -6,6 +6,7 @@ import { colors, spacing, typography, radius } from '../../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../src/services/supabase';
 import { useAuth } from '../../../src/context/AuthContext';
+import { getIsPro } from '../../../src/services/proStatus';
 
 interface Post {
   id: string;
@@ -40,6 +41,9 @@ export default function PostDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [sending, setSending] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => { getIsPro().then(setIsPro); }, []);
   const scrollRef = useRef<ScrollView>(null);
 
   const postId = Array.isArray(id) ? id[0] : id;
@@ -171,23 +175,34 @@ export default function PostDetailScreen() {
         ))}
       </ScrollView>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Write a comment..."
-          placeholderTextColor={colors.text.muted}
-          value={commentText}
-          onChangeText={setCommentText}
-          multiline
-        />
+      {isPro ? (
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Write a comment..."
+            placeholderTextColor={colors.text.muted}
+            value={commentText}
+            onChangeText={setCommentText}
+            multiline
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, (!commentText.trim() || sending) && styles.sendButtonDisabled]}
+            onPress={submitComment}
+            disabled={!commentText.trim() || sending}
+          >
+            <Ionicons name="send" size={20} color={colors.text.inverse} />
+          </TouchableOpacity>
+        </View>
+      ) : (
         <TouchableOpacity
-          style={[styles.sendButton, (!commentText.trim() || sending) && styles.sendButtonDisabled]}
-          onPress={submitComment}
-          disabled={!commentText.trim() || sending}
+          style={styles.commentLockBanner}
+          onPress={() => router.push({ pathname: '/paywall', params: { message: 'Join Pro to comment' } })}
         >
-          <Ionicons name="send" size={20} color={colors.text.inverse} />
+          <Ionicons name="lock-closed" size={16} color={colors.accent.primary} />
+          <Text style={styles.commentLockText}>Join Pro to comment</Text>
+          <Text style={styles.commentLockCta}>Upgrade ⚡</Text>
         </TouchableOpacity>
-      </View>
+      )}
     </ScreenWrapper>
   );
 }
@@ -248,4 +263,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center',
   },
   sendButtonDisabled: { opacity: 0.4 },
+  commentLockBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border.default,
+    backgroundColor: colors.background.primary,
+  },
+  commentLockText: { ...typography.body, color: colors.text.secondary, flex: 1 },
+  commentLockCta: { ...typography.smallMedium, color: colors.accent.primary },
 });

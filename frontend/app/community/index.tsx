@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
+import { getIsPro } from '../../src/services/proStatus';
+import * as Haptics from 'expo-haptics';
 
 interface Post {
   id: string;
@@ -30,6 +32,16 @@ export default function CommunityScreen() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => { getIsPro().then(setIsPro); }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchPosts();
+    setRefreshing(false);
+  }, []);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -89,14 +101,24 @@ export default function CommunityScreen() {
     }
   }
 
+  function handleCreatePress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isPro) {
+      router.push('/community/create');
+    } else {
+      router.push({ pathname: '/paywall', params: { message: 'Share your journey with Pro' } });
+    }
+  }
+
   return (
-    <ScreenWrapper scroll>
+    <View style={styles.root}>
+    <ScreenWrapper scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}>
       <AppHeader
         showBack
         onBack={() => router.back()}
         title="Community"
-        rightIcon="add-circle-outline"
-        onRightPress={() => router.push('/community/create')}
+        rightIcon={isPro ? 'add-circle-outline' : 'lock-closed-outline'}
+        onRightPress={handleCreatePress}
       />
 
       {loading ? (
@@ -155,10 +177,24 @@ export default function CommunityScreen() {
         ))
       )}
     </ScreenWrapper>
+
+    {/* Floating create button */}
+    <TouchableOpacity style={styles.fab} onPress={handleCreatePress} activeOpacity={0.85}>
+      {isPro
+        ? <Ionicons name="add" size={28} color={colors.text.inverse} />
+        : (
+          <View style={styles.fabLocked}>
+            <Ionicons name="lock-closed" size={18} color={colors.text.inverse} />
+            <Text style={styles.fabProText}>Pro</Text>
+          </View>
+        )}
+    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   loading: { paddingTop: spacing.section, alignItems: 'center' },
   empty: { paddingTop: spacing.section, alignItems: 'center', gap: spacing.md },
   emptyText: { ...typography.body, color: colors.text.tertiary },
@@ -187,4 +223,14 @@ const styles = StyleSheet.create({
   actionButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   actionText: { ...typography.small, color: colors.text.secondary },
   actionTextActive: { color: colors.semantic.error },
+  fab: {
+    position: 'absolute', bottom: 32, right: spacing.lg,
+    width: 56, height: 56, borderRadius: radius.full,
+    backgroundColor: colors.accent.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.accent.primary, shadowOpacity: 0.4,
+    shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+  },
+  fabLocked: { alignItems: 'center', gap: 2 },
+  fabProText: { fontSize: 9, fontWeight: '700', color: colors.text.inverse },
 });

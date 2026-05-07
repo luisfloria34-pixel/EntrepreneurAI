@@ -111,6 +111,7 @@ function RootLayoutNav() {
       <Stack.Screen name="settings/help" />
       <Stack.Screen name="settings/about" />
       <Stack.Screen name="settings/edit-profile" />
+      <Stack.Screen name="settings/subscription" />
       <Stack.Screen name="settings/language" />
       <Stack.Screen name="settings/theme" />
       <Stack.Screen name="settings/rate" />

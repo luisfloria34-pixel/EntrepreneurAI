@@ -11,8 +11,33 @@ import { Ionicons } from '@expo/vector-icons';
 import { sendMessage, GroqMessage } from '../../src/services/groq';
 import { getIsPro } from '../../src/services/proStatus';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 
 const FREE_MESSAGE_LIMIT = 5;
+const MSG_COUNT_KEY = 'coach_messages_count';
+const MSG_DATE_KEY = 'coach_messages_date';
+
+async function getDailyCount(): Promise<number> {
+  const today = new Date().toISOString().split('T')[0];
+  const [storedDate, storedCount] = await Promise.all([
+    AsyncStorage.getItem(MSG_DATE_KEY),
+    AsyncStorage.getItem(MSG_COUNT_KEY),
+  ]);
+  if (storedDate !== today) {
+    await AsyncStorage.multiSet([[MSG_DATE_KEY, today], [MSG_COUNT_KEY, '0']]);
+    return 0;
+  }
+  return parseInt(storedCount ?? '0', 10);
+}
+
+async function incrementDailyCount(): Promise<number> {
+  const today = new Date().toISOString().split('T')[0];
+  const current = await getDailyCount();
+  const next = current + 1;
+  await AsyncStorage.multiSet([[MSG_DATE_KEY, today], [MSG_COUNT_KEY, String(next)]]);
+  return next;
+}
 
 const quickPrompts = ['Validate my idea', 'Create a pitch', 'Marketing help', 'Financial tips'];
 const suggestedPrompts = [
@@ -85,11 +110,14 @@ export default function CoachScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [userMessageCount, setUserMessageCount] = useState(0);
-  const [isPro, setIsPro] = useState(true); // optimistic until loaded
+  const [isPro, setIsPro] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    getIsPro().then(setIsPro);
+    Promise.all([getIsPro(), getDailyCount()]).then(([pro, count]) => {
+      setIsPro(pro);
+      setUserMessageCount(count);
+    });
   }, []);
 
   // Load last conversation from Supabase on mount
@@ -220,7 +248,7 @@ export default function CoachScreen() {
     setInputText('');
     setSelectedImage(null);
     setIsTyping(true);
-    setUserMessageCount(c => c + 1);
+    incrementDailyCount().then(setUserMessageCount);
     scrollRef.current?.scrollToEnd({ animated: true });
 
     try {
@@ -350,19 +378,25 @@ export default function CoachScreen() {
         )}
 
         {/* Free tier limit banner */}
-        {!isPro && userMessageCount >= FREE_MESSAGE_LIMIT - 1 && (
+        {!isPro && userMessageCount >= FREE_MESSAGE_LIMIT && (
           <TouchableOpacity
             style={styles.limitBanner}
-            onPress={() => router.push({ pathname: '/paywall', params: { message: "You've used your 5 daily AI messages" } })}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push({ pathname: '/paywall', params: { message: "You've used your 5 free messages today 🔥" } });
+            }}
           >
-            <Ionicons name="lock-closed" size={14} color="#F59E0B" />
-            <Text style={styles.limitBannerText}>
-              {userMessageCount >= FREE_MESSAGE_LIMIT
-                ? "Daily limit reached · Upgrade for unlimited"
-                : `${FREE_MESSAGE_LIMIT - userMessageCount} message${FREE_MESSAGE_LIMIT - userMessageCount === 1 ? '' : 's'} left today`}
-            </Text>
-            <Text style={styles.limitBannerCta}>Upgrade ⚡</Text>
+            <Text style={styles.limitBannerEmoji}>🔥</Text>
+            <Text style={styles.limitBannerText}>You've used your 5 free messages today</Text>
+            <Text style={styles.limitBannerCta}>Unlock Unlimited ⚡</Text>
           </TouchableOpacity>
+        )}
+        {!isPro && userMessageCount > 0 && userMessageCount < FREE_MESSAGE_LIMIT && (
+          <View style={styles.countBanner}>
+            <Text style={styles.countBannerText}>
+              {FREE_MESSAGE_LIMIT - userMessageCount} free message{FREE_MESSAGE_LIMIT - userMessageCount === 1 ? '' : 's'} left today
+            </Text>
+          </View>
         )}
 
         {/* Quick Prompts */}
@@ -406,13 +440,14 @@ export default function CoachScreen() {
             </TouchableOpacity>
 
             <RNTextInput
-              style={styles.input}
-              placeholder="Ask your AI coach anything..."
+              style={[styles.input, !isPro && userMessageCount >= FREE_MESSAGE_LIMIT && styles.inputDisabled]}
+              placeholder={!isPro && userMessageCount >= FREE_MESSAGE_LIMIT ? "Daily limit reached — upgrade for unlimited" : "Ask your AI coach anything..."}
               placeholderTextColor={colors.text.muted}
               value={inputText}
               onChangeText={setInputText}
               multiline
               maxLength={500}
+              editable={isPro || userMessageCount < FREE_MESSAGE_LIMIT}
             />
 
             <TouchableOpacity
@@ -542,6 +577,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B18', borderTopWidth: 1, borderTopColor: '#F59E0B40',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
+  limitBannerEmoji: { fontSize: 16 },
   limitBannerText: { ...typography.small, color: '#F59E0B', flex: 1 },
   limitBannerCta: { ...typography.smallMedium, color: '#F59E0B', textDecorationLine: 'underline' },
+  countBanner: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    backgroundColor: colors.background.tertiary, alignItems: 'center',
+  },
+  countBannerText: { ...typography.caption, color: colors.text.muted },
+  inputDisabled: { opacity: 0.5 },
 });

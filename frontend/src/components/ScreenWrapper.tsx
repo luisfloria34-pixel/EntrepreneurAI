@@ -12,6 +12,7 @@ interface ScreenWrapperProps {
   keyboardAvoiding?: boolean;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   bottomInset?: boolean;
+  refreshControl?: React.ReactElement;
 }
 
 export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
@@ -23,6 +24,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   keyboardAvoiding = false,
   edges = ['top'],
   bottomInset = false,
+  refreshControl,
 }) => {
   const insets = useSafeAreaInsets();
 
@@ -47,6 +49,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
       contentContainerStyle={contentContainerStyle}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>

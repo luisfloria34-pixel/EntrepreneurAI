@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, Card, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useDailyTasks } from '../../src/hooks/useDailyTasks';
+import * as Haptics from 'expo-haptics';
 
 const QUICK_ACTIONS = [
   { id: '1', title: 'Challenge', icon: 'flash', color: '#F59E0B', route: '/challenge' },
@@ -23,8 +24,15 @@ const DAILY_CHALLENGE = {
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { tasks, loading: tasksLoading, toggleTask } = useDailyTasks();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetchProfile();
+    setRefreshing(false);
+  }, [refetchProfile]);
 
   const hustleScore = profile?.hustle_score ?? 0;
   const level = profile?.level ?? 1;
@@ -32,7 +40,7 @@ export default function DashboardScreen() {
   const firstName = profile?.name?.split(' ')[0] ?? 'there';
 
   return (
-    <ScreenWrapper scroll>
+    <ScreenWrapper scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -141,7 +149,7 @@ export default function DashboardScreen() {
             <TouchableOpacity
               key={task.id}
               style={[styles.taskItem, index < Math.min(tasks.length, 3) - 1 && styles.taskDivider]}
-              onPress={() => toggleTask(task.id)}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleTask(task.id); }}
               activeOpacity={0.7}
             >
               <View style={[styles.taskCheck, task.completed && styles.taskCheckDone]}>

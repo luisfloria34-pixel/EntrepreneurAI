@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography, radius, shadows } from '../theme';
+import * as Haptics from 'expo-haptics';
 
 interface PrimaryButtonProps {
   title: string;
@@ -33,7 +34,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
         disabled && styles.disabled,
         style,
       ]}
-      onPress={onPress}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onPress(); }}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >

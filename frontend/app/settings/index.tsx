@@ -38,7 +38,7 @@ export default function SettingsScreen() {
           title={isPro ? '⭐ EntrepeneuerAI Pro' : '⚡ Upgrade to Pro'}
           subtitle={isPro ? 'Active — manage subscription' : 'Unlock all courses, AI & community'}
           leftIcon={isPro ? 'diamond' : 'flash-outline'}
-          onPress={() => router.push('/paywall')}
+          onPress={() => router.push('/settings/subscription')}
           showDivider={false}
         />
       </View>

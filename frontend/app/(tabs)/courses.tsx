@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
@@ -11,13 +11,20 @@ const FREE_COURSE_LIMIT = 2;
 
 export default function CoursesScreen() {
   const router = useRouter();
-  const { inProgress, available, loading } = useCourses();
+  const { inProgress, available, loading, refetch } = useCourses();
   const [isPro, setIsPro] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { getIsPro().then(setIsPro); }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   return (
-    <ScreenWrapper scroll>
+    <ScreenWrapper scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}>
       <AppHeader
         title="Courses"
         subtitle="Master entrepreneurship skills"
@@ -55,11 +62,13 @@ export default function CoursesScreen() {
           ) : (
             available.map((course, i) => {
               const locked = !isPro && i >= FREE_COURSE_LIMIT;
+              const isFree = !isPro && i < FREE_COURSE_LIMIT;
               return (
                 <CourseCard
                   key={course.id}
                   course={course}
                   locked={locked}
+                  isFree={isFree}
                   onPress={() => {
                     if (locked) {
                       router.push({ pathname: '/paywall', params: { message: 'Unlock all courses with Pro' } });
@@ -77,10 +86,11 @@ export default function CoursesScreen() {
   );
 }
 
-const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void; locked?: boolean }> = ({
+const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void; locked?: boolean; isFree?: boolean }> = ({
   course,
   onPress,
   locked = false,
+  isFree = false,
 }) => {
   const color = locked ? colors.text.muted : (course.icon_color ?? colors.accent.primary);
   const icon = (course.icon ?? 'book') as keyof typeof Ionicons.glyphMap;
@@ -91,8 +101,15 @@ const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void; lo
       {locked && (
         <View style={styles.lockOverlay}>
           <View style={styles.lockBadge}>
-            <Ionicons name="lock-closed" size={16} color={colors.text.inverse} />
+            <Ionicons name="lock-closed" size={14} color={colors.text.inverse} />
             <Text style={styles.lockText}>Pro</Text>
+          </View>
+        </View>
+      )}
+      {isFree && (
+        <View style={styles.freeBadgeWrap}>
+          <View style={styles.freeBadge}>
+            <Text style={styles.freeBadgeText}>FREE</Text>
           </View>
         </View>
       )}
@@ -184,6 +201,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   lockText: { fontSize: 11, fontWeight: '700', color: colors.text.inverse },
+  freeBadgeWrap: { position: 'absolute', top: spacing.md, right: spacing.md, zIndex: 5 },
+  freeBadge: {
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    backgroundColor: colors.semantic.success, borderRadius: radius.full,
+  },
+  freeBadgeText: { fontSize: 9, fontWeight: '700', color: colors.text.inverse, letterSpacing: 0.5 },
   courseHeader: {
     flexDirection: 'row',
     marginBottom: spacing.lg,
