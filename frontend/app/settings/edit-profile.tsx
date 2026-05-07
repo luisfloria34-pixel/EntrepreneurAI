@@ -1,53 +1,114 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { profileData } from '../../src/data/profileMock';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../../src/services/supabase';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const [name, setName] = useState(profileData.name);
-  const [handle, setHandle] = useState(profileData.handle.replace('@', ''));
-  const [bio, setBio] = useState(profileData.bio);
-  const [email, setEmail] = useState(profileData.email);
+  const { user } = useAuth();
+  const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
-  const handleSave = () => {
-    Alert.alert(
-      'Profile Updated!',
-      'Your changes have been saved. (Demo only)',
-      [{ text: 'OK', onPress: () => router.back() }]
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('name, email, avatar_url')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setName(data.name ?? '');
+          setBio('');
+          setAvatarUri(data.avatar_url ?? null);
+        }
+        setLoading(false);
+      });
+  }, [user]);
+
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+  async function pickAvatar() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  }
+
+  async function handleSave() {
+    if (!user || saving) return;
+    setSaving(true);
+    try {
+      let avatar_url = avatarUri;
+
+      if (avatarUri && avatarUri.startsWith('file')) {
+        const ext = avatarUri.split('.').pop() ?? 'jpg';
+        const filename = `${user.id}/avatar.${ext}`;
+        const response = await fetch(avatarUri);
+        const blob = await response.blob();
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filename, blob, { upsert: true, contentType: `image/${ext}` });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filename);
+          avatar_url = urlData.publicUrl;
+        }
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: name.trim(), avatar_url })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      Alert.alert('Saved!', 'Your profile has been updated.', [{ text: 'OK', onPress: () => router.back() }]);
+    } catch {
+      Alert.alert('Error', 'Could not save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <ScreenWrapper>
+        <AppHeader title="Edit Profile" showBack onBack={() => router.back()} />
+        <View style={styles.loadingContainer}><ActivityIndicator color={colors.accent.primary} /></View>
+      </ScreenWrapper>
     );
-  };
+  }
 
   return (
     <ScreenWrapper>
-      <AppHeader 
-        title="Edit Profile" 
-        showBack 
-        onBack={() => router.back()}
-      />
-
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <AppHeader title="Edit Profile" showBack onBack={() => router.back()} />
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.content}>
-          {/* Avatar Section */}
           <View style={styles.avatarSection}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {name.split(' ').map(n => n[0]).join('')}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.changeAvatarBtn}>
+            <TouchableOpacity style={styles.avatar} onPress={pickAvatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+              <View style={styles.cameraOverlay}>
+                <Ionicons name="camera" size={20} color={colors.text.inverse} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.changeAvatarBtn} onPress={pickAvatar}>
               <Ionicons name="camera" size={16} color={colors.accent.primary} />
               <Text style={styles.changeAvatarText}>Change Photo</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Form Fields */}
           <View style={styles.form}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
@@ -61,18 +122,14 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username</Text>
-              <View style={styles.inputWithPrefix}>
-                <Text style={styles.inputPrefix}>@</Text>
-                <TextInput
-                  style={[styles.input, styles.inputNoPadding]}
-                  value={handle}
-                  onChangeText={setHandle}
-                  placeholder="username"
-                  placeholderTextColor={colors.text.muted}
-                  autoCapitalize="none"
-                />
-              </View>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={user?.email ?? ''}
+                editable={false}
+                placeholderTextColor={colors.text.muted}
+              />
+              <Text style={styles.helperText}>Email cannot be changed here</Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -89,28 +146,11 @@ export default function EditProfileScreen() {
               />
               <Text style={styles.charCount}>{bio.length}/150</Text>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="your@email.com"
-                placeholderTextColor={colors.text.muted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
           </View>
         </View>
 
-        {/* Save Button */}
         <View style={styles.footer}>
-          <PrimaryButton 
-            title="Save Changes"
-            onPress={handleSave}
-          />
+          <PrimaryButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} disabled={saving} />
         </View>
       </KeyboardAvoidingView>
     </ScreenWrapper>
@@ -118,82 +158,35 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  avatarSection: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-  },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1 },
+  content: { flex: 1 },
+  avatarSection: { alignItems: 'center', paddingVertical: spacing.xxl },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: radius.full,
-    backgroundColor: colors.accent.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+    width: 100, height: 100, borderRadius: radius.full,
+    backgroundColor: colors.accent.primary, alignItems: 'center',
+    justifyContent: 'center', marginBottom: spacing.md,
   },
-  avatarText: {
-    ...typography.h1,
-    color: colors.text.inverse,
+  avatarText: { ...typography.h1, color: colors.text.inverse },
+  cameraOverlay: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 30, height: 30, borderRadius: radius.full,
+    backgroundColor: colors.background.elevated,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.background.primary,
   },
-  changeAvatarBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  changeAvatarText: {
-    ...typography.smallMedium,
-    color: colors.accent.primary,
-  },
-  form: {
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: spacing.xl,
-  },
-  label: {
-    ...typography.smallMedium,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-  },
+  changeAvatarBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  changeAvatarText: { ...typography.smallMedium, color: colors.accent.primary },
+  form: { flex: 1 },
+  inputGroup: { marginBottom: spacing.xl },
+  label: { ...typography.smallMedium, color: colors.text.secondary, marginBottom: spacing.sm },
   input: {
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    ...typography.body,
-    color: colors.text.primary,
+    backgroundColor: colors.background.card, borderRadius: radius.lg,
+    padding: spacing.lg, ...typography.body, color: colors.text.primary,
   },
-  inputWithPrefix: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    paddingLeft: spacing.lg,
-  },
-  inputPrefix: {
-    ...typography.body,
-    color: colors.text.tertiary,
-  },
-  inputNoPadding: {
-    flex: 1,
-    paddingLeft: spacing.xs,
-  },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  charCount: {
-    ...typography.caption,
-    color: colors.text.muted,
-    textAlign: 'right',
-    marginTop: spacing.xs,
-  },
-  footer: {
-    paddingVertical: spacing.lg,
-  },
+  inputDisabled: { opacity: 0.5 },
+  helperText: { ...typography.caption, color: colors.text.muted, marginTop: spacing.xs },
+  textArea: { minHeight: 100, textAlignVertical: 'top' },
+  charCount: { ...typography.caption, color: colors.text.muted, textAlign: 'right', marginTop: spacing.xs },
+  footer: { paddingVertical: spacing.lg },
 });

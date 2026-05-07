@@ -4,16 +4,17 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { profileData } from '../src/data/profileMock';
+import { useProofs } from '../src/hooks/useProofs';
 
 export default function ProofsScreen() {
   const router = useRouter();
+  const { proofs, loading } = useProofs();
 
   return (
     <ScreenWrapper>
-      <AppHeader 
-        title="Proof of Work" 
-        showBack 
+      <AppHeader
+        title="Proof of Work"
+        showBack
         onBack={() => router.back()}
       />
 
@@ -21,15 +22,15 @@ export default function ProofsScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{profileData.totalProofs}</Text>
+            <Text style={styles.statValue}>{proofs.length}</Text>
             <Text style={styles.statLabel}>Total Proofs</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{profileData.proofs.filter(p => p.type === 'image').length}</Text>
+            <Text style={styles.statValue}>{proofs.length}</Text>
             <Text style={styles.statLabel}>Images</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{profileData.proofs.filter(p => p.type === 'video').length}</Text>
+            <Text style={styles.statValue}>0</Text>
             <Text style={styles.statLabel}>Videos</Text>
           </View>
         </View>
@@ -37,28 +38,22 @@ export default function ProofsScreen() {
         {/* Proofs Grid */}
         <Text style={styles.sectionTitle}>Your Proofs</Text>
         <View style={styles.proofsGrid}>
-          {profileData.proofs.map((proof) => (
+          {proofs.map((proof) => (
             <TouchableOpacity key={proof.id} style={styles.proofItem}>
               <View style={styles.proofPlaceholder}>
-                <Ionicons 
-                  name={proof.type === 'video' ? 'play-circle' : 'image'} 
-                  size={32} 
-                  color={colors.text.tertiary} 
-                />
+                <Ionicons name="image" size={32} color={colors.text.tertiary} />
               </View>
-              <Text style={styles.proofTitle} numberOfLines={1}>{proof.title}</Text>
-              <Text style={styles.proofDate}>{proof.date}</Text>
+              <Text style={styles.proofTitle} numberOfLines={1}>{proof.title ?? 'Proof'}</Text>
+              <Text style={styles.proofDate}>{proof.created_at.split('T')[0]}</Text>
             </TouchableOpacity>
           ))}
-          
-          {/* Empty slots */}
-          {[...Array(Math.max(0, 8 - profileData.proofs.length))].map((_, i) => (
-            <View key={`empty-${i}`} style={styles.proofItem}>
-              <View style={[styles.proofPlaceholder, styles.emptyPlaceholder]}>
-                <Ionicons name="add" size={24} color={colors.text.muted} />
-              </View>
+
+          {proofs.length === 0 && !loading && (
+            <View style={styles.emptyState}>
+              <Ionicons name="camera-outline" size={48} color={colors.text.muted} />
+              <Text style={styles.emptyText}>No proofs yet. Upload your first win!</Text>
             </View>
-          ))}
+          )}
         </View>
       </ScrollView>
 
@@ -120,11 +115,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  emptyPlaceholder: {
-    borderWidth: 2,
-    borderColor: colors.border.default,
-    borderStyle: 'dashed',
-    backgroundColor: 'transparent',
+  emptyState: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: spacing.section,
+    gap: spacing.md,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.text.tertiary,
+    textAlign: 'center',
   },
   proofTitle: {
     ...typography.smallMedium,

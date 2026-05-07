@@ -4,10 +4,11 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, Badge } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { dailyTasks } from '../src/data/dummyData';
+import { useDailyTasks } from '../src/hooks/useDailyTasks';
 
 export default function TasksScreen() {
   const router = useRouter();
+  const { tasks: dailyTasks, toggleTask } = useDailyTasks();
   const completedCount = dailyTasks.filter(t => t.completed).length;
   const totalXP = dailyTasks.reduce((acc, t) => acc + t.xp, 0);
 
@@ -30,7 +31,7 @@ export default function TasksScreen() {
       {/* Tasks */}
       <Text style={styles.sectionTitle}>Today's Tasks</Text>
       {dailyTasks.map((task) => (
-        <TouchableOpacity key={task.id} style={styles.taskCard} activeOpacity={0.7}>
+        <TouchableOpacity key={task.id} style={styles.taskCard} activeOpacity={0.7} onPress={() => toggleTask(task.id)}>
           <View style={[styles.taskCheck, task.completed && styles.taskCheckDone]}>
             {task.completed && <Ionicons name="checkmark" size={16} color={colors.text.inverse} />}
           </View>

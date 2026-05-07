@@ -4,24 +4,21 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { allBadges } from '../../src/data/dummyData';
+import { useBadges } from '../../src/hooks/useBadges';
 
 export default function BadgeDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const badge = allBadges.find(b => b.id === id) || allBadges[0];
+  const { badges } = useBadges();
+  const badge = badges.find(b => b.id === id) ?? badges[0];
 
   return (
     <ScreenWrapper>
       <AppHeader showBack onBack={() => router.back()} />
       
       <View style={styles.content}>
-        <View style={[styles.badgeIcon, { backgroundColor: `${badge.color}20` }]}>
-          <Ionicons 
-            name={badge.icon as keyof typeof Ionicons.glyphMap} 
-            size={64} 
-            color={badge.earned ? badge.color : colors.text.tertiary} 
-          />
+        <View style={[styles.badgeIcon, { backgroundColor: badge.earned ? `${badge.color}20` : colors.background.tertiary }]}>
+          <Text style={{ fontSize: 64, opacity: badge.earned ? 1 : 0.3 }}>{badge?.emoji ?? '🏅'}</Text>
         </View>
         
         <Text style={styles.badgeName}>{badge.name}</Text>
@@ -30,7 +27,9 @@ export default function BadgeDetailScreen() {
         {badge.earned ? (
           <View style={styles.earnedInfo}>
             <Ionicons name="checkmark-circle" size={24} color={colors.semantic.success} />
-            <Text style={styles.earnedText}>Earned on {badge.earnedDate}</Text>
+            <Text style={styles.earnedText}>
+              {badge.earnedAt ? `Earned on ${badge.earnedAt.split('T')[0]}` : 'Earned!'}
+            </Text>
           </View>
         ) : (
           <View style={styles.lockedInfo}>

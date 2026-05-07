@@ -8,8 +8,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { quickPrompts, suggestedPrompts } from '../../src/data/dummyData';
 import { sendMessage, GroqMessage } from '../../src/services/groq';
+
+const quickPrompts = ['Validate my idea', 'Create a pitch', 'Marketing help', 'Financial tips'];
+const suggestedPrompts = [
+  { id: '1', category: 'Ideas', prompt: 'Help me brainstorm business ideas in the wellness space', icon: 'bulb' },
+  { id: '2', category: 'Validation', prompt: 'How do I validate if my idea has market demand?', icon: 'checkmark-circle' },
+  { id: '3', category: 'Marketing', prompt: 'Create a social media content calendar for my startup', icon: 'megaphone' },
+  { id: '4', category: 'Finance', prompt: 'How much runway do I need before launching?', icon: 'cash' },
+  { id: '5', category: 'Pitch', prompt: 'Help me create a 60-second elevator pitch', icon: 'mic' },
+  { id: '6', category: 'Growth', prompt: 'What are the best growth hacking strategies?', icon: 'trending-up' },
+];
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 

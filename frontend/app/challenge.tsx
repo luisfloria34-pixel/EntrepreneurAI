@@ -4,7 +4,18 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, Badge, ProgressBar } from '../src/components';
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { dailyChallenge } from '../src/data/dummyData';
+const dailyChallenge = {
+  title: 'Market Validation Sprint',
+  description: 'Complete 3 market research activities and validate one business idea with the AI Coach.',
+  xp: 150,
+  timeLimit: '24h',
+  tasks: [
+    { id: 't1', title: 'Complete Market Research lesson', done: false },
+    { id: 't2', title: 'Identify 3 competitors', done: false },
+    { id: 't3', title: 'Validate idea with AI Coach', done: false },
+  ],
+  progress: 0,
+};
 
 export default function ChallengeScreen() {
   const router = useRouter();

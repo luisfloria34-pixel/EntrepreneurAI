@@ -5,6 +5,8 @@ import { colors } from '../src/theme';
 import { OnboardingProvider } from '../src/context/OnboardingContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { supabase } from '../src/services/supabase';
+import { checkAndUpdateStreak } from '../src/services/streak';
+import { requestPermissions, scheduleDailyReminder, scheduleStreakReminder, cancelAllNotifications } from '../src/services/notifications';
 
 const PROTECTED_SEGMENTS = new Set([
   '(tabs)', 'challenge', 'tasks', 'community', 'analytics',
@@ -30,16 +32,29 @@ function RootLayoutNav() {
     }
   }, [session, loading, segments]);
 
-  // Listen directly for SIGNED_OUT so logout redirects instantly
-  // regardless of which screen triggered it
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       if (event === 'SIGNED_OUT') {
+        cancelAllNotifications();
         router.replace('/login');
+      }
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && sess?.user) {
+        checkAndUpdateStreak(sess.user.id);
       }
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    requestPermissions().then(granted => {
+      if (granted) {
+        scheduleDailyReminder();
+        scheduleStreakReminder();
+      }
+    });
+    checkAndUpdateStreak(session.user.id);
+  }, [session?.user?.id]);
 
   // Block render until session is known — prevents flash of protected content
   if (loading) return null;
