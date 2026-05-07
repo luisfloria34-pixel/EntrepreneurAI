@@ -9,6 +9,10 @@ import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { sendMessage, GroqMessage } from '../../src/services/groq';
+import { getIsPro } from '../../src/services/proStatus';
+import { useRouter } from 'expo-router';
+
+const FREE_MESSAGE_LIMIT = 5;
 
 const quickPrompts = ['Validate my idea', 'Create a pitch', 'Marketing help', 'Financial tips'];
 const suggestedPrompts = [
@@ -73,13 +77,20 @@ const dotStyles = StyleSheet.create({
 
 export default function CoachScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showPrompts, setShowPrompts] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [userMessageCount, setUserMessageCount] = useState(0);
+  const [isPro, setIsPro] = useState(true); // optimistic until loaded
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    getIsPro().then(setIsPro);
+  }, []);
 
   // Load last conversation from Supabase on mount
   useEffect(() => {
@@ -177,6 +188,14 @@ export default function CoachScreen() {
     if (!inputText.trim() && !selectedImage) return;
     if (isTyping) return;
 
+    if (!isPro && userMessageCount >= FREE_MESSAGE_LIMIT) {
+      router.push({
+        pathname: '/paywall',
+        params: { message: "You've used your 5 daily AI messages" },
+      });
+      return;
+    }
+
     let uploadedUrl: string | undefined;
 
     if (selectedImage) {
@@ -201,6 +220,7 @@ export default function CoachScreen() {
     setInputText('');
     setSelectedImage(null);
     setIsTyping(true);
+    setUserMessageCount(c => c + 1);
     scrollRef.current?.scrollToEnd({ animated: true });
 
     try {
@@ -327,6 +347,22 @@ export default function CoachScreen() {
               </View>
             )}
           </ScrollView>
+        )}
+
+        {/* Free tier limit banner */}
+        {!isPro && userMessageCount >= FREE_MESSAGE_LIMIT - 1 && (
+          <TouchableOpacity
+            style={styles.limitBanner}
+            onPress={() => router.push({ pathname: '/paywall', params: { message: "You've used your 5 daily AI messages" } })}
+          >
+            <Ionicons name="lock-closed" size={14} color="#F59E0B" />
+            <Text style={styles.limitBannerText}>
+              {userMessageCount >= FREE_MESSAGE_LIMIT
+                ? "Daily limit reached · Upgrade for unlimited"
+                : `${FREE_MESSAGE_LIMIT - userMessageCount} message${FREE_MESSAGE_LIMIT - userMessageCount === 1 ? '' : 's'} left today`}
+            </Text>
+            <Text style={styles.limitBannerCta}>Upgrade ⚡</Text>
+          </TouchableOpacity>
         )}
 
         {/* Quick Prompts */}
@@ -501,4 +537,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginLeft: spacing.xs,
   },
   sendButtonDisabled: { backgroundColor: colors.background.elevated },
+  limitBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: '#F59E0B18', borderTopWidth: 1, borderTopColor: '#F59E0B40',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  limitBannerText: { ...typography.small, color: '#F59E0B', flex: 1 },
+  limitBannerCta: { ...typography.smallMedium, color: '#F59E0B', textDecorationLine: 'underline' },
 });

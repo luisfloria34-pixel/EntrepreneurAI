@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 import { useProfile } from '../../src/hooks/useProfile';
+import { getIsPro } from '../../src/services/proStatus';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -16,6 +17,16 @@ export default function CreatePostScreen() {
   const [content, setContent] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+
+  // Gate: check Pro before allowing post
+  async function checkProGate(): Promise<boolean> {
+    const pro = await getIsPro();
+    if (!pro) {
+      router.push({ pathname: '/paywall', params: { message: 'Community posting is a Pro feature' } });
+      return false;
+    }
+    return true;
+  }
 
   const initials = (profile?.name ?? user?.email ?? 'U')[0].toUpperCase();
 
@@ -31,6 +42,7 @@ export default function CreatePostScreen() {
 
   async function handlePost() {
     if (!user || !content.trim() || posting) return;
+    if (!(await checkProGate())) return;
     setPosting(true);
     try {
       let image_url: string | null = null;

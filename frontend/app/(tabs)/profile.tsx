@@ -9,12 +9,13 @@ import { useProfile } from '../../src/hooks/useProfile';
 import { useProofs } from '../../src/hooks/useProofs';
 import { useBadges } from '../../src/hooks/useBadges';
 import { useAuth } from '../../src/context/AuthContext';
-import { usePurchases } from '../../src/context/PurchasesContext';
+import { getIsPro } from '../../src/services/proStatus';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const { isPro, presentCustomerCenter } = usePurchases();
+  const [isPro, setIsPro] = React.useState(false);
+  React.useEffect(() => { getIsPro().then(setIsPro); }, []);
   const { profile, loading: profileLoading } = useProfile();
   const { proofs, loading: proofsLoading } = useProofs();
   const { badges, earnedCount, loading: badgesLoading } = useBadges();
@@ -68,15 +69,14 @@ export default function ProfileScreen() {
 
         {/* Pro / Upgrade banner */}
         {isPro ? (
-          <TouchableOpacity style={styles.proBanner} onPress={presentCustomerCenter}>
+          <View style={styles.proBanner}>
             <Ionicons name="diamond" size={16} color={colors.accent.primary} />
-            <Text style={styles.proBannerText}>EntrepeneuerAI Pro · Manage</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.accent.primary} />
-          </TouchableOpacity>
+            <Text style={styles.proBannerText}>EntrepeneuerAI Pro ✓</Text>
+          </View>
         ) : (
           <TouchableOpacity style={styles.upgradeBanner} onPress={() => router.push('/paywall')}>
-            <Ionicons name="diamond-outline" size={16} color="#F59E0B" />
-            <Text style={styles.upgradeBannerText}>Upgrade to Pro — Unlock Everything</Text>
+            <Ionicons name="flash" size={16} color="#F59E0B" />
+            <Text style={styles.upgradeBannerText}>Upgrade to Pro ⚡</Text>
             <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
           </TouchableOpacity>
         )}

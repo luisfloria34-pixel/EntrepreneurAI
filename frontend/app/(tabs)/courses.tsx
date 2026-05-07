@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useCourses, CourseWithProgress } from '../../src/hooks/useCourses';
+import { getIsPro } from '../../src/services/proStatus';
+
+const FREE_COURSE_LIMIT = 2;
 
 export default function CoursesScreen() {
   const router = useRouter();
   const { inProgress, available, loading } = useCourses();
+  const [isPro, setIsPro] = useState(true);
+
+  useEffect(() => { getIsPro().then(setIsPro); }, []);
 
   return (
     <ScreenWrapper scroll>
@@ -47,13 +53,23 @@ export default function CoursesScreen() {
               <Text style={styles.emptyText}>All courses in progress!</Text>
             </View>
           ) : (
-            available.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onPress={() => router.push(`/course/${course.id}`)}
-              />
-            ))
+            available.map((course, i) => {
+              const locked = !isPro && i >= FREE_COURSE_LIMIT;
+              return (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  locked={locked}
+                  onPress={() => {
+                    if (locked) {
+                      router.push({ pathname: '/paywall', params: { message: 'Unlock all courses with Pro' } });
+                    } else {
+                      router.push(`/course/${course.id}`);
+                    }
+                  }}
+                />
+              );
+            })
           )}
         </>
       )}
@@ -61,19 +77,30 @@ export default function CoursesScreen() {
   );
 }
 
-const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void }> = ({
+const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void; locked?: boolean }> = ({
   course,
   onPress,
+  locked = false,
 }) => {
-  const color = course.icon_color ?? colors.accent.primary;
+  const color = locked ? colors.text.muted : (course.icon_color ?? colors.accent.primary);
   const icon = (course.icon ?? 'book') as keyof typeof Ionicons.glyphMap;
   const hasProgress = course.progress > 0;
 
   return (
-    <TouchableOpacity style={styles.courseCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.courseCard, locked && styles.courseCardLocked]} onPress={onPress} activeOpacity={0.7}>
+      {locked && (
+        <View style={styles.lockOverlay}>
+          <View style={styles.lockBadge}>
+            <Ionicons name="lock-closed" size={16} color={colors.text.inverse} />
+            <Text style={styles.lockText}>Pro</Text>
+          </View>
+        </View>
+      )}
       <View style={styles.courseHeader}>
-        <View style={[styles.courseIcon, { backgroundColor: `${color}20` }]}>
-          <Ionicons name={icon} size={26} color={color} />
+        <View style={[styles.courseIcon, { backgroundColor: locked ? colors.background.tertiary : `${color}20` }]}>
+          {locked
+            ? <Ionicons name="lock-closed" size={26} color={colors.text.muted} />
+            : <Ionicons name={icon} size={26} color={color} />}
         </View>
         <View style={styles.courseInfo}>
           <Text style={styles.courseTitle}>{course.title}</Text>
@@ -143,7 +170,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.lg,
+    position: 'relative',
+    overflow: 'hidden',
   },
+  courseCardLocked: { opacity: 0.7 },
+  lockOverlay: {
+    position: 'absolute', top: spacing.md, right: spacing.md, zIndex: 5,
+  },
+  lockBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.accent.primary,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  lockText: { fontSize: 11, fontWeight: '700', color: colors.text.inverse },
   courseHeader: {
     flexDirection: 'row',
     marginBottom: spacing.lg,

@@ -58,7 +58,8 @@ export default function SurveyResultScreen() {
   };
 
   const handleGoToDashboard = () => {
-    router.replace('/(tabs)/dashboard');
+    // Show paywall before dashboard — this is where 50% of conversions happen
+    router.push('/paywall');
   };
 
   return (
