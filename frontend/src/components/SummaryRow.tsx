@@ -28,7 +28,7 @@ export const SummaryRow: React.FC<SummaryRowProps> = ({
         ) : null}
         <Text style={styles.label}>{label}</Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
+      <Text style={styles.value} numberOfLines={2}>{value}</Text>
     </View>
   );
 };
@@ -36,15 +36,16 @@ export const SummaryRow: React.FC<SummaryRowProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.default,
+    gap: spacing.sm,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   emoji: {
     fontSize: 16,
@@ -56,9 +57,13 @@ const styles = StyleSheet.create({
   label: {
     ...typography.body,
     color: colors.text.secondary,
+    flex: 1,
   },
   value: {
     ...typography.bodyMedium,
     color: colors.text.primary,
+    flex: 2,
+    textAlign: 'right',
+    flexWrap: 'wrap',
   },
 });
