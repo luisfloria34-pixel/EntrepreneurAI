@@ -4,21 +4,45 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '../src/theme';
 import { OnboardingProvider } from '../src/context/OnboardingContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { supabase } from '../src/services/supabase';
+
+const PROTECTED_SEGMENTS = new Set([
+  '(tabs)', 'challenge', 'tasks', 'community', 'analytics',
+  'badges', 'badge', 'settings', 'proofs', 'proof-upload',
+  'lesson', 'course',
+]);
 
 function RootLayoutNav() {
   const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
+  // Redirect based on session state whenever it changes
   useEffect(() => {
     if (loading) return;
-    const inTabsGroup = segments[0] === '(tabs)';
-    if (!session && inTabsGroup) {
+
+    const isProtected = segments.length > 0 && PROTECTED_SEGMENTS.has(segments[0]);
+
+    if (!session && isProtected) {
       router.replace('/login');
     } else if (session && (segments[0] === 'login' || segments[0] === 'signup')) {
       router.replace('/(tabs)/dashboard');
     }
   }, [session, loading, segments]);
+
+  // Listen directly for SIGNED_OUT so logout redirects instantly
+  // regardless of which screen triggered it
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        router.replace('/login');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Block render until session is known — prevents flash of protected content
+  if (loading) return null;
 
   return (
     <Stack
