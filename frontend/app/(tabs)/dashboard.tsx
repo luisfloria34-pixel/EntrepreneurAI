@@ -4,15 +4,27 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, Card, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { courses, quickActions, dailyChallenge } from '../../src/data/dummyData';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useDailyTasks } from '../../src/hooks/useDailyTasks';
+
+const QUICK_ACTIONS = [
+  { id: '1', title: 'Challenge', icon: 'flash', color: '#F59E0B', route: '/challenge' },
+  { id: '2', title: 'AI Coach', icon: 'chatbubbles', color: '#00D4FF', route: '/(tabs)/coach' },
+  { id: '3', title: 'Community', icon: 'people', color: '#8B5CF6', route: '/community' },
+  { id: '4', title: 'Analytics', icon: 'stats-chart', color: '#10B981', route: '/analytics' },
+] as const;
+
+const DAILY_CHALLENGE = {
+  title: 'Market Validation Sprint',
+  description: 'Complete 3 market research activities and validate one business idea.',
+  xp: 150,
+  timeLimit: '24h',
+};
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { profile, loading: profileLoading } = useProfile();
   const { tasks, loading: tasksLoading, toggleTask } = useDailyTasks();
-  const currentCourse = courses.find(c => c.progress > 0 && c.progress < 100);
 
   const hustleScore = profile?.hustle_score ?? 0;
   const level = profile?.level ?? 1;
@@ -83,47 +95,20 @@ export default function DashboardScreen() {
           <Ionicons name="flash" size={28} color="#F59E0B" />
         </View>
         <View style={styles.challengeContent}>
-          <Text style={styles.challengeTitle}>{dailyChallenge.title}</Text>
-          <Text style={styles.challengeDesc} numberOfLines={1}>{dailyChallenge.description}</Text>
+          <Text style={styles.challengeTitle}>{DAILY_CHALLENGE.title}</Text>
+          <Text style={styles.challengeDesc} numberOfLines={1}>{DAILY_CHALLENGE.description}</Text>
           <View style={styles.challengeMeta}>
-            <Badge label={`+${dailyChallenge.xp} XP`} variant="warning" size="small" />
-            <Text style={styles.challengeTime}>{dailyChallenge.timeLimit}</Text>
+            <Badge label={`+${DAILY_CHALLENGE.xp} XP`} variant="warning" size="small" />
+            <Text style={styles.challengeTime}>{DAILY_CHALLENGE.timeLimit}</Text>
           </View>
         </View>
         <Ionicons name="play-circle" size={36} color={colors.accent.primary} />
       </TouchableOpacity>
 
-      {/* Continue Learning */}
-      {currentCourse && (
-        <>
-          <SectionHeader title="Continue Learning" actionText="All Courses" onAction={() => router.push('/(tabs)/courses')} />
-          <TouchableOpacity
-            style={styles.courseCard}
-            onPress={() => router.push(`/course/${currentCourse.id}`)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.courseIcon, { backgroundColor: `${currentCourse.color}20` }]}>
-              <Ionicons name={currentCourse.icon as keyof typeof Ionicons.glyphMap} size={28} color={currentCourse.color} />
-            </View>
-            <View style={styles.courseContent}>
-              <Text style={styles.courseTitle}>{currentCourse.title}</Text>
-              <Text style={styles.courseLesson}>Lesson {currentCourse.completedLessons + 1} of {currentCourse.totalLessons}</Text>
-              <ProgressBar
-                progress={currentCourse.progress}
-                showPercentage
-                height={6}
-                color={currentCourse.color}
-                style={styles.courseProgress}
-              />
-            </View>
-          </TouchableOpacity>
-        </>
-      )}
-
       {/* Quick Actions */}
       <SectionHeader title="Quick Actions" />
       <View style={styles.quickActionsGrid}>
-        {quickActions.map((action) => (
+        {QUICK_ACTIONS.map((action) => (
           <TouchableOpacity
             key={action.id}
             style={styles.quickActionCard}
