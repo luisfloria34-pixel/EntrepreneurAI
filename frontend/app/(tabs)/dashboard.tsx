@@ -1,14 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, Card, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { userData, dailyTasks, dailyChallenge, courses, quickActions } from '../../src/data/dummyData';
+import { courses, quickActions, dailyChallenge } from '../../src/data/dummyData';
+import { useProfile } from '../../src/hooks/useProfile';
+import { useDailyTasks } from '../../src/hooks/useDailyTasks';
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { profile, loading: profileLoading } = useProfile();
+  const { tasks, loading: tasksLoading, toggleTask } = useDailyTasks();
   const currentCourse = courses.find(c => c.progress > 0 && c.progress < 100);
+
+  const hustleScore = profile?.hustle_score ?? 0;
+  const level = profile?.level ?? 1;
+  const streak = profile?.streak ?? 0;
+  const firstName = profile?.name?.split(' ')[0] ?? 'there';
 
   return (
     <ScreenWrapper scroll>
@@ -16,19 +25,27 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Good morning,</Text>
-          <Text style={styles.userName}>{userData.name.split(' ')[0]}</Text>
+          {profileLoading ? (
+            <View style={styles.skeletonName} />
+          ) : (
+            <Text style={styles.userName}>{firstName}</Text>
+          )}
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.streakBadge}
           onPress={() => router.push('/analytics')}
         >
           <Ionicons name="flame" size={20} color="#F59E0B" />
-          <Text style={styles.streakText}>{userData.streak} day streak</Text>
+          {profileLoading ? (
+            <View style={styles.skeletonStreak} />
+          ) : (
+            <Text style={styles.streakText}>{streak} day streak</Text>
+          )}
         </TouchableOpacity>
       </View>
 
       {/* Hustle Score */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.scoreCard}
         onPress={() => router.push('/analytics')}
         activeOpacity={0.8}
@@ -36,24 +53,28 @@ export default function DashboardScreen() {
         <View style={styles.scoreHeader}>
           <View>
             <Text style={styles.scoreLabel}>Hustle Score</Text>
-            <Text style={styles.scoreValue}>{userData.hustleScore.toLocaleString()}</Text>
+            {profileLoading ? (
+              <View style={styles.skeletonScore} />
+            ) : (
+              <Text style={styles.scoreValue}>{hustleScore.toLocaleString()}</Text>
+            )}
           </View>
           <View style={styles.levelBadge}>
             <Ionicons name="trophy" size={16} color={colors.accent.primary} />
-            <Text style={styles.levelText}>Level {userData.level}</Text>
+            <Text style={styles.levelText}>Level {level}</Text>
           </View>
         </View>
-        <ProgressBar 
-          progress={(userData.hustleScore % 1000) / 10} 
+        <ProgressBar
+          progress={(hustleScore % 1000) / 10}
           showPercentage={false}
           height={6}
         />
-        <Text style={styles.xpToLevel}>{1000 - (userData.hustleScore % 1000)} XP to next level</Text>
+        <Text style={styles.xpToLevel}>{1000 - (hustleScore % 1000)} XP to next level</Text>
       </TouchableOpacity>
 
       {/* Daily Challenge */}
       <SectionHeader title="Today's Challenge" actionText="View" onAction={() => router.push('/challenge')} />
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.challengeCard}
         onPress={() => router.push('/challenge')}
         activeOpacity={0.8}
@@ -76,7 +97,7 @@ export default function DashboardScreen() {
       {currentCourse && (
         <>
           <SectionHeader title="Continue Learning" actionText="All Courses" onAction={() => router.push('/(tabs)/courses')} />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.courseCard}
             onPress={() => router.push(`/course/${currentCourse.id}`)}
             activeOpacity={0.8}
@@ -87,7 +108,7 @@ export default function DashboardScreen() {
             <View style={styles.courseContent}>
               <Text style={styles.courseTitle}>{currentCourse.title}</Text>
               <Text style={styles.courseLesson}>Lesson {currentCourse.completedLessons + 1} of {currentCourse.totalLessons}</Text>
-              <ProgressBar 
+              <ProgressBar
                 progress={currentCourse.progress}
                 showPercentage
                 height={6}
@@ -103,7 +124,7 @@ export default function DashboardScreen() {
       <SectionHeader title="Quick Actions" />
       <View style={styles.quickActionsGrid}>
         {quickActions.map((action) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={action.id}
             style={styles.quickActionCard}
             activeOpacity={0.7}
@@ -122,23 +143,35 @@ export default function DashboardScreen() {
       {/* Daily Tasks */}
       <SectionHeader title="Daily Tasks" actionText="View All" onAction={() => router.push('/tasks')} />
       <View style={styles.tasksContainer}>
-        {dailyTasks.slice(0, 3).map((task, index) => (
-          <TouchableOpacity 
-            key={task.id}
-            style={[styles.taskItem, index < 2 && styles.taskDivider]}
-            onPress={() => router.push('/tasks')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.taskCheck, task.completed && styles.taskCheckDone]}>
-              {task.completed && <Ionicons name="checkmark" size={14} color={colors.text.inverse} />}
-            </View>
-            <View style={styles.taskContent}>
-              <Text style={[styles.taskTitle, task.completed && styles.taskTitleDone]}>{task.title}</Text>
-              <Text style={styles.taskDesc}>{task.description}</Text>
-            </View>
-            <Badge label={`+${task.xp}`} variant={task.completed ? 'success' : 'default'} size="small" />
-          </TouchableOpacity>
-        ))}
+        {tasksLoading ? (
+          <View style={styles.loadingTasks}>
+            <ActivityIndicator color={colors.accent.primary} />
+          </View>
+        ) : tasks.length === 0 ? (
+          <View style={styles.emptyTasks}>
+            <Text style={styles.emptyTasksText}>No tasks for today yet.</Text>
+          </View>
+        ) : (
+          tasks.slice(0, 3).map((task, index) => (
+            <TouchableOpacity
+              key={task.id}
+              style={[styles.taskItem, index < Math.min(tasks.length, 3) - 1 && styles.taskDivider]}
+              onPress={() => toggleTask(task.id)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.taskCheck, task.completed && styles.taskCheckDone]}>
+                {task.completed && <Ionicons name="checkmark" size={14} color={colors.text.inverse} />}
+              </View>
+              <View style={styles.taskContent}>
+                <Text style={[styles.taskTitle, task.completed && styles.taskTitleDone]}>{task.title}</Text>
+                {task.description ? (
+                  <Text style={styles.taskDesc}>{task.description}</Text>
+                ) : null}
+              </View>
+              <Badge label={`+${task.xp}`} variant={task.completed ? 'success' : 'default'} size="small" />
+            </TouchableOpacity>
+          ))
+        )}
       </View>
     </ScreenWrapper>
   );
@@ -158,6 +191,26 @@ const styles = StyleSheet.create({
   userName: {
     ...typography.h1,
     color: colors.text.primary,
+    marginTop: spacing.xs,
+  },
+  skeletonName: {
+    width: 120,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colors.border.default,
+    marginTop: spacing.xs,
+  },
+  skeletonStreak: {
+    width: 80,
+    height: 16,
+    borderRadius: radius.sm,
+    backgroundColor: '#F59E0B40',
+  },
+  skeletonScore: {
+    width: 100,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.border.default,
     marginTop: spacing.xs,
   },
   streakBadge: {
@@ -311,6 +364,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.card,
     borderRadius: radius.lg,
     overflow: 'hidden',
+  },
+  loadingTasks: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyTasks: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyTasksText: {
+    ...typography.small,
+    color: colors.text.tertiary,
   },
   taskItem: {
     flexDirection: 'row',
