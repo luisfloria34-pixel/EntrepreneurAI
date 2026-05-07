@@ -12,7 +12,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+');
   const [showPhone, setShowPhone] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,16 +39,26 @@ export default function LoginScreen() {
     if (error) setError(error.message);
   };
 
+  const handlePhoneChange = (value: string) => {
+    const digits = value.replace(/[^0-9]/g, '');
+    setPhone('+' + digits);
+  };
+
+  const isValidE164 = /^\+[1-9]\d{6,14}$/.test(phone);
+
   const handlePhoneSend = async () => {
-    if (!phone.trim()) return;
+    if (!isValidE164) {
+      setError('Enter a valid phone number (e.g. +49 176 12345678).');
+      return;
+    }
     setError('');
     setPhoneLoading(true);
-    const { error } = await signInWithPhone(phone.trim());
+    const { error } = await signInWithPhone(phone);
     setPhoneLoading(false);
     if (error) {
       setError(error.message);
     } else {
-      router.push({ pathname: '/phone-verify', params: { phone: phone.trim() } });
+      router.push({ pathname: '/phone-verify', params: { phone } });
     }
   };
 
@@ -126,17 +136,17 @@ export default function LoginScreen() {
             </>
           ) : (
             <>
-              <TouchableOpacity style={styles.backRow} onPress={() => { setShowPhone(false); setError(''); }}>
+              <TouchableOpacity style={styles.backRow} onPress={() => { setShowPhone(false); setPhone('+'); setError(''); }}>
                 <Ionicons name="arrow-back" size={18} color={colors.text.secondary} />
                 <Text style={styles.backText}>Back to email</Text>
               </TouchableOpacity>
 
               <TextInput
                 label="Phone Number"
-                placeholder="+1 234 567 8900"
+                placeholder="+49 176 12345678"
                 value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
+                onChangeText={handlePhoneChange}
+                keyboardType="default"
                 leftIcon="call-outline"
               />
 
