@@ -5,6 +5,11 @@ import { ScreenWrapper, AppHeader, PrimaryButton, TextInput } from '../src/compo
 import { colors, spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/context/AuthContext';
+import { supabase } from '../src/services/supabase';
+
+// TODO: Replace with real Apple Sign In after Apple Developer setup
+const APPLE_TEST_EMAIL = 'apple.test@entrepreneurai.com';
+const APPLE_TEST_PASSWORD = 'AppleTest123!';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -18,6 +23,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const handleLogin = async () => {
     setError('');
@@ -37,6 +43,37 @@ export default function LoginScreen() {
     const { error } = await signInWithGoogle();
     setGoogleLoading(false);
     if (error) setError(error.message);
+  };
+
+  // TODO: Replace with real Apple Sign In after Apple Developer setup
+  const handleApple = async () => {
+    setError('');
+    setAppleLoading(true);
+    // Try sign in first
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: APPLE_TEST_EMAIL,
+      password: APPLE_TEST_PASSWORD,
+    });
+    if (signInErr) {
+      // User doesn't exist yet — create it
+      const { error: signUpErr } = await supabase.auth.signUp({
+        email: APPLE_TEST_EMAIL,
+        password: APPLE_TEST_PASSWORD,
+        options: { data: { name: 'Apple User' } },
+      });
+      if (signUpErr) {
+        setAppleLoading(false);
+        setError(signUpErr.message);
+        return;
+      }
+      // Sign in after signup
+      await supabase.auth.signInWithPassword({
+        email: APPLE_TEST_EMAIL,
+        password: APPLE_TEST_PASSWORD,
+      });
+    }
+    setAppleLoading(false);
+    router.replace('/(tabs)/dashboard');
   };
 
   const handlePhoneChange = (value: string) => {
@@ -124,8 +161,10 @@ export default function LoginScreen() {
                     : <Ionicons name="logo-google" size={22} color={colors.text.primary} />}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.iconBtn}>
-                  <Ionicons name="logo-apple" size={24} color={colors.text.primary} />
+                <TouchableOpacity style={styles.iconBtn} onPress={handleApple} disabled={appleLoading}>
+                  {appleLoading
+                    ? <ActivityIndicator size="small" color={colors.text.primary} />
+                    : <Ionicons name="logo-apple" size={24} color={colors.text.primary} />}
                 </TouchableOpacity>
 
                 <TouchableOpacity
