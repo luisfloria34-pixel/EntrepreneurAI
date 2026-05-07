@@ -32,6 +32,7 @@ function RootLayoutNav() {
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="phone-verify" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="survey/[step]" />
       <Stack.Screen name="survey/result" options={{ animation: 'fade' }} />

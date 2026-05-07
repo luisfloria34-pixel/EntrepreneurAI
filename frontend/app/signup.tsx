@@ -18,7 +18,7 @@ export default function SignupScreen() {
   const handleSignup = async () => {
     setError('');
     setLoading(true);
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, name);
     setLoading(false);
     if (error) {
       setError(error.message);
@@ -30,7 +30,7 @@ export default function SignupScreen() {
   return (
     <ScreenWrapper scroll keyboardAvoiding>
       <AppHeader showBack onBack={() => router.back()} />
-      
+
       <View style={styles.content}>
         <View style={styles.headerSection}>
           <Text style={styles.title}>Create Account</Text>
