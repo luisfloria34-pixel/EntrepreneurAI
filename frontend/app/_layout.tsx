@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { supabase } from '../src/services/supabase';
 import { checkAndUpdateStreak } from '../src/services/streak';
 import { requestPermissions, scheduleDailyReminder, scheduleStreakReminder, cancelAllNotifications } from '../src/services/notifications';
+import { initializePurchases, loginUser, logoutUser } from '../src/services/revenuecat';
+import { PurchasesProvider } from '../src/context/PurchasesContext';
 
 const PROTECTED_SEGMENTS = new Set([
   '(tabs)', 'challenge', 'tasks', 'community', 'analytics',
@@ -33,13 +35,20 @@ function RootLayoutNav() {
   }, [session, loading, segments]);
 
   useEffect(() => {
+    // Initialize RevenueCat once at startup (before any session)
+    initializePurchases();
+  }, []);
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
       if (event === 'SIGNED_OUT') {
         cancelAllNotifications();
+        logoutUser();
         router.replace('/login');
       }
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && sess?.user) {
         checkAndUpdateStreak(sess.user.id);
+        loginUser(sess.user.id); // tie RevenueCat identity to Supabase user
       }
     });
     return () => subscription.unsubscribe();
@@ -54,6 +63,7 @@ function RootLayoutNav() {
       }
     });
     checkAndUpdateStreak(session.user.id);
+    loginUser(session.user.id);
   }, [session?.user?.id]);
 
   // Block render until session is known — prevents flash of protected content
@@ -99,6 +109,7 @@ function RootLayoutNav() {
       <Stack.Screen name="settings/rate" />
       <Stack.Screen name="proofs" />
       <Stack.Screen name="proof-upload" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
     </Stack>
   );
 }
@@ -106,10 +117,12 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <OnboardingProvider>
-        <StatusBar style="light" />
-        <RootLayoutNav />
-      </OnboardingProvider>
+      <PurchasesProvider>
+        <OnboardingProvider>
+          <StatusBar style="light" />
+          <RootLayoutNav />
+        </OnboardingProvider>
+      </PurchasesProvider>
     </AuthProvider>
   );
 }

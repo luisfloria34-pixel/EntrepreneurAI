@@ -9,10 +9,12 @@ import { useProfile } from '../../src/hooks/useProfile';
 import { useProofs } from '../../src/hooks/useProofs';
 import { useBadges } from '../../src/hooks/useBadges';
 import { useAuth } from '../../src/context/AuthContext';
+import { usePurchases } from '../../src/context/PurchasesContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { signOut, user } = useAuth();
+  const { isPro, presentCustomerCenter } = usePurchases();
   const { profile, loading: profileLoading } = useProfile();
   const { proofs, loading: proofsLoading } = useProofs();
   const { badges, earnedCount, loading: badgesLoading } = useBadges();
@@ -62,6 +64,21 @@ export default function ProfileScreen() {
             <Ionicons name="flame" size={14} color={colors.semantic.warning} />
             <Text style={styles.statusText}>On a {streak}-day streak!</Text>
           </View>
+        )}
+
+        {/* Pro / Upgrade banner */}
+        {isPro ? (
+          <TouchableOpacity style={styles.proBanner} onPress={presentCustomerCenter}>
+            <Ionicons name="diamond" size={16} color={colors.accent.primary} />
+            <Text style={styles.proBannerText}>EntrepeneuerAI Pro · Manage</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.accent.primary} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.upgradeBanner} onPress={() => router.push('/paywall')}>
+            <Ionicons name="diamond-outline" size={16} color="#F59E0B" />
+            <Text style={styles.upgradeBannerText}>Upgrade to Pro — Unlock Everything</Text>
+            <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
+          </TouchableOpacity>
         )}
 
         <View style={styles.headerButtons}>
@@ -325,6 +342,22 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.semantic.warning,
   },
+  proBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: `${colors.accent.primary}15`,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderRadius: radius.full, marginTop: spacing.lg,
+    borderWidth: 1, borderColor: `${colors.accent.primary}40`,
+  },
+  proBannerText: { ...typography.smallMedium, color: colors.accent.primary, flex: 1 },
+  upgradeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: '#F59E0B18',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderRadius: radius.full, marginTop: spacing.lg,
+    borderWidth: 1, borderColor: '#F59E0B40',
+  },
+  upgradeBannerText: { ...typography.smallMedium, color: '#F59E0B', flex: 1 },
   headerButtons: {
     flexDirection: 'row',
     gap: spacing.md,
