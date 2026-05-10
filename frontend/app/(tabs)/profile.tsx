@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius, shadows } from '../../src/theme';
@@ -268,9 +269,12 @@ const StatCard = ({
   color: string;
 }) => (
   <View style={styles.statCard}>
-    <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
+    <LinearGradient
+      colors={[`${color}30`, `${color}10`]}
+      style={styles.statIconContainer}
+    >
       <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={18} color={color} />
-    </View>
+    </LinearGradient>
     <Text style={[styles.statValue, { color }]}>{value.toLocaleString()}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>

@@ -495,8 +495,8 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     gap: spacing.sm,
   },
-  userContent: { backgroundColor: colors.accent.primary, borderBottomRightRadius: radius.xs },
-  assistantContent: { backgroundColor: colors.background.card, borderBottomLeftRadius: radius.xs },
+  userContent: { backgroundColor: colors.accent.primary, borderBottomRightRadius: radius.xs, borderWidth: 0 },
+  assistantContent: { backgroundColor: colors.background.card, borderBottomLeftRadius: radius.xs, borderWidth: 1, borderColor: colors.border.default },
   chatImage: {
     width: 200,
     height: 150,

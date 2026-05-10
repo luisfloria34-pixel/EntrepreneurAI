@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, ProgressBar, Badge, SectionHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
@@ -154,16 +155,17 @@ const CourseCard: React.FC<{ course: CourseWithProgress; onPress: () => void; lo
             </View>
           )}
         </View>
-        <View style={[styles.startButton, hasProgress && styles.continueButton]}>
-          <Text style={[styles.startText, hasProgress && styles.continueText]}>
-            {hasProgress ? 'Continue' : 'Start Course'}
-          </Text>
-          <Ionicons
-            name="arrow-forward"
-            size={16}
-            color={hasProgress ? colors.text.inverse : colors.accent.primary}
-          />
-        </View>
+        {hasProgress ? (
+          <LinearGradient colors={['#00D4FF', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.startButton, { borderWidth: 0 }]}>
+            <Text style={[styles.startText, styles.continueText]}>Continue</Text>
+            <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />
+          </LinearGradient>
+        ) : (
+          <View style={styles.startButton}>
+            <Text style={styles.startText}>Start Course</Text>
+            <Ionicons name="arrow-forward" size={16} color={locked ? colors.text.muted : colors.accent.primary} />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );

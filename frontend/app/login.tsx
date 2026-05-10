@@ -1,19 +1,68 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View, Text, TouchableOpacity, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, Animated,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, AppHeader, PrimaryButton, TextInput } from '../src/components';
-import { colors, spacing, typography, radius } from '../src/theme';
+import { TextInput, PrimaryButton } from '../src/components';
+import { spacing, typography, radius } from '../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/context/AuthContext';
+import { useTheme } from '../src/context/ThemeContext';
 import { supabase } from '../src/services/supabase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
-// TODO: Replace with real Apple Sign In after Apple Developer setup
 const APPLE_TEST_EMAIL = 'apple.test@entrepreneurai.com';
 const APPLE_TEST_PASSWORD = 'AppleTest123!';
 
+function LogoMark({ colors }: { colors: any }) {
+  const glow = useRef(new Animated.Value(0.6)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.6, duration: 1800, useNativeDriver: true }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.timing(rotate, { toValue: 1, duration: 12000, useNativeDriver: true })
+    ).start();
+  }, []);
+
+  const spin = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={{ alignItems: 'center', marginBottom: spacing.xxl }}>
+      <View style={{ position: 'relative', width: 80, height: 80, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View style={{
+          position: 'absolute', width: 80, height: 80, borderRadius: 40,
+          borderWidth: 1.5, borderColor: '#00D4FF',
+          opacity: glow, transform: [{ rotate: spin }],
+          borderStyle: 'dashed',
+        }} />
+        <LinearGradient
+          colors={['#00D4FF22', '#7C3AED22']}
+          style={{ width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Text style={{ fontSize: 32 }}>⚡</Text>
+        </LinearGradient>
+      </View>
+      <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.5, marginTop: spacing.md }}>
+        Entrepreneur<Text style={{ color: '#00D4FF' }}>AI</Text>
+      </Text>
+    </View>
+  );
+}
+
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { signIn, signInWithGoogle, signInWithPhone } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,11 +79,8 @@ export default function LoginScreen() {
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      router.replace('/(tabs)/dashboard');
-    }
+    if (error) setError('Wrong email or password. Try again.');
+    else router.replace('/(tabs)/dashboard');
   };
 
   const handleGoogle = async () => {
@@ -45,76 +91,90 @@ export default function LoginScreen() {
     if (error) setError(error.message);
   };
 
-  // TODO: Replace with real Apple Sign In after Apple Developer setup
   const handleApple = async () => {
     setError('');
     setAppleLoading(true);
-    // Try sign in first
-    const { error: signInErr } = await supabase.auth.signInWithPassword({
-      email: APPLE_TEST_EMAIL,
-      password: APPLE_TEST_PASSWORD,
-    });
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: APPLE_TEST_EMAIL, password: APPLE_TEST_PASSWORD });
     if (signInErr) {
-      // User doesn't exist yet — create it
-      const { error: signUpErr } = await supabase.auth.signUp({
-        email: APPLE_TEST_EMAIL,
-        password: APPLE_TEST_PASSWORD,
-        options: { data: { name: 'Apple User' } },
-      });
-      if (signUpErr) {
-        setAppleLoading(false);
-        setError(signUpErr.message);
-        return;
-      }
-      // Sign in after signup
-      await supabase.auth.signInWithPassword({
-        email: APPLE_TEST_EMAIL,
-        password: APPLE_TEST_PASSWORD,
-      });
+      const { error: signUpErr } = await supabase.auth.signUp({ email: APPLE_TEST_EMAIL, password: APPLE_TEST_PASSWORD, options: { data: { name: 'Apple User' } } });
+      if (signUpErr) { setAppleLoading(false); setError(signUpErr.message); return; }
+      await supabase.auth.signInWithPassword({ email: APPLE_TEST_EMAIL, password: APPLE_TEST_PASSWORD });
     }
     setAppleLoading(false);
     router.replace('/(tabs)/dashboard');
   };
 
-  const handlePhoneChange = (value: string) => {
-    const digits = value.replace(/[^0-9]/g, '');
-    setPhone('+' + digits);
-  };
-
+  const handlePhoneChange = (value: string) => setPhone('+' + value.replace(/[^0-9]/g, ''));
   const isValidE164 = /^\+[1-9]\d{6,14}$/.test(phone);
 
   const handlePhoneSend = async () => {
-    if (!isValidE164) {
-      setError('Enter a valid phone number (e.g. +49 176 12345678).');
-      return;
-    }
+    if (!isValidE164) { setError('Enter a valid phone number (e.g. +1 555 1234567)'); return; }
     setError('');
     setPhoneLoading(true);
     const { error } = await signInWithPhone(phone);
     setPhoneLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push({ pathname: '/phone-verify', params: { phone } });
-    }
+    if (error) setError(error.message);
+    else router.push({ pathname: '/phone-verify', params: { phone } });
   };
 
+  const SocialBtn = ({ onPress, loading: l, icon, label }: { onPress: () => void; loading: boolean; icon: string; label: string }) => (
+    <TouchableOpacity
+      style={{
+        flex: 1, height: 52, borderRadius: radius.lg,
+        backgroundColor: isDark ? colors.background.elevated : colors.background.secondary,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1, borderColor: colors.border.default,
+        gap: 6, flexDirection: 'row',
+      }}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
+      disabled={l}
+    >
+      {l ? <ActivityIndicator size="small" color={colors.text.secondary} /> : (
+        <>
+          <Ionicons name={icon as any} size={20} color={colors.text.primary} />
+          <Text style={{ ...typography.smallMedium, color: colors.text.secondary }}>{label}</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
-    <ScreenWrapper scroll keyboardAvoiding>
-      <AppHeader showBack onBack={() => router.back()} />
+    <View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      {/* Subtle radial glow at top */}
+      <View style={{
+        position: 'absolute', top: -60, left: '20%',
+        width: 300, height: 300, borderRadius: 150,
+        backgroundColor: '#00D4FF08',
+      }} />
+      <View style={{
+        position: 'absolute', top: -40, right: '10%',
+        width: 200, height: 200, borderRadius: 100,
+        backgroundColor: '#7C3AED08',
+      }} />
 
-      <View style={styles.content}>
-        <View style={styles.headerSection}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your journey</Text>
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <LogoMark colors={colors} />
 
-        <View style={styles.formSection}>
           {!showPhone ? (
             <>
+              <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.5, marginBottom: spacing.sm }}>
+                Back to the grind 🔥
+              </Text>
+              <Text style={{ ...typography.body, color: colors.text.secondary, marginBottom: spacing.xxxl }}>
+                Your momentum is waiting.
+              </Text>
+
               <TextInput
                 label="Email"
-                placeholder="Enter your email"
+                placeholder="you@example.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -122,7 +182,7 @@ export default function LoginScreen() {
               />
               <TextInput
                 label="Password"
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -130,178 +190,69 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
-                style={styles.forgotPassword}
+                style={{ alignSelf: 'flex-end', marginBottom: spacing.xxl, marginTop: -spacing.sm }}
                 onPress={() => router.push('/forgot-password')}
               >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                <Text style={{ ...typography.smallMedium, color: '#00D4FF' }}>Forgot password?</Text>
               </TouchableOpacity>
 
-              {!!error && <Text style={styles.errorText}>{error}</Text>}
+              {!!error && (
+                <View style={{ backgroundColor: '#EF444418', borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#EF444440' }}>
+                  <Text style={{ ...typography.small, color: '#EF4444' }}>{error}</Text>
+                </View>
+              )}
 
-              <PrimaryButton
-                title={loading ? 'Signing In...' : 'Sign In'}
-                onPress={handleLogin}
-                style={styles.loginButton}
-              />
+              <PrimaryButton title={loading ? 'Signing in...' : 'Sign In'} onPress={handleLogin} loading={loading} />
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.dividerLine} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: spacing.xxl }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
+                <Text style={{ ...typography.small, color: colors.text.muted, marginHorizontal: spacing.lg }}>or</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
               </View>
 
-              <View style={styles.altButtons}>
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={handleGoogle}
-                  disabled={googleLoading}
-                >
-                  {googleLoading
-                    ? <ActivityIndicator size="small" color={colors.text.primary} />
-                    : <Ionicons name="logo-google" size={22} color={colors.text.primary} />}
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.iconBtn} onPress={handleApple} disabled={appleLoading}>
-                  {appleLoading
-                    ? <ActivityIndicator size="small" color={colors.text.primary} />
-                    : <Ionicons name="logo-apple" size={24} color={colors.text.primary} />}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={() => { setShowPhone(true); setError(''); }}
-                >
-                  <Ionicons name="call" size={22} color={colors.text.primary} />
-                </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <SocialBtn onPress={handleGoogle} loading={googleLoading} icon="logo-google" label="Google" />
+                <SocialBtn onPress={handleApple} loading={appleLoading} icon="logo-apple" label="Apple" />
+                <SocialBtn onPress={() => { setShowPhone(true); setError(''); }} loading={false} icon="call" label="Phone" />
               </View>
             </>
           ) : (
             <>
-              <TouchableOpacity style={styles.backRow} onPress={() => { setShowPhone(false); setPhone('+'); setError(''); }}>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxl }}
+                onPress={() => { setShowPhone(false); setPhone('+'); setError(''); }}
+              >
                 <Ionicons name="arrow-back" size={18} color={colors.text.secondary} />
-                <Text style={styles.backText}>Back to email</Text>
+                <Text style={{ ...typography.body, color: colors.text.secondary }}>Back to email</Text>
               </TouchableOpacity>
 
-              <TextInput
-                label="Phone Number"
-                placeholder="+49 176 12345678"
-                value={phone}
-                onChangeText={handlePhoneChange}
-                keyboardType="default"
-                leftIcon="call-outline"
-              />
+              <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.5, marginBottom: spacing.sm }}>
+                Phone sign-in 📱
+              </Text>
+              <Text style={{ ...typography.body, color: colors.text.secondary, marginBottom: spacing.xxxl }}>
+                We'll send you a verification code.
+              </Text>
 
-              {!!error && <Text style={styles.errorText}>{error}</Text>}
+              <TextInput label="Phone" placeholder="+1 555 1234567" value={phone} onChangeText={handlePhoneChange} keyboardType="phone-pad" leftIcon="call-outline" />
 
-              <PrimaryButton
-                title={phoneLoading ? 'Sending Code...' : 'Send OTP Code'}
-                onPress={handlePhoneSend}
-                style={styles.loginButton}
-              />
+              {!!error && (
+                <View style={{ backgroundColor: '#EF444418', borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md }}>
+                  <Text style={{ ...typography.small, color: '#EF4444' }}>{error}</Text>
+                </View>
+              )}
+
+              <PrimaryButton title={phoneLoading ? 'Sending...' : 'Send Code'} onPress={handlePhoneSend} loading={phoneLoading} />
             </>
           )}
-        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/signup')}>
-            <Text style={styles.footerLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScreenWrapper>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xxl }}>
+            <Text style={{ ...typography.body, color: colors.text.secondary }}>New here? </Text>
+            <TouchableOpacity onPress={() => router.push('/signup')}>
+              <Text style={{ ...typography.bodyMedium, color: '#00D4FF' }}>Create account →</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  headerSection: {
-    paddingTop: spacing.xxl,
-    marginBottom: spacing.xxxl,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.text.primary,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.text.secondary,
-    marginTop: spacing.sm,
-  },
-  formSection: {
-    flex: 1,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.xxl,
-    marginTop: -spacing.sm,
-  },
-  forgotPasswordText: {
-    ...typography.smallMedium,
-    color: colors.accent.primary,
-  },
-  errorText: {
-    ...typography.small,
-    color: '#FF4444',
-    marginBottom: spacing.sm,
-  },
-  loginButton: {
-    marginTop: spacing.sm,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.xxxl,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border.default,
-  },
-  dividerText: {
-    ...typography.small,
-    color: colors.text.tertiary,
-    marginHorizontal: spacing.lg,
-  },
-  altButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  iconBtn: {
-    flex: 1,
-    height: 56,
-    borderRadius: radius.lg,
-    backgroundColor: colors.background.tertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xxl,
-  },
-  backText: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  footerText: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  footerLink: {
-    ...typography.bodyMedium,
-    color: colors.accent.primary,
-  },
-});

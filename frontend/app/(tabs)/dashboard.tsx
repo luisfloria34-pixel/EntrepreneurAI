@@ -1,470 +1,292 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ScreenWrapper, Card, ProgressBar, Badge, SectionHeader } from '../../src/components';
-import { colors, spacing, typography, radius, shadows } from '../../src/theme';
+import { ScreenWrapper, Badge, SectionHeader } from '../../src/components';
+import { spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useDailyTasks } from '../../src/hooks/useDailyTasks';
 import { getIsPro } from '../../src/services/proStatus';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
-function getTimeGreeting(hour: number): string {
-  if (hour >= 5 && hour < 9)  return 'Rise & Grind,';
-  if (hour >= 9 && hour < 12) return 'Good Morning,';
-  if (hour >= 12 && hour < 14) return 'Good Afternoon,';
-  if (hour >= 14 && hour < 18) return 'Keep Pushing,';
-  if (hour >= 18 && hour < 21) return 'Good Evening,';
-  if (hour >= 21)              return 'Still Hustling,';
-  return 'Midnight Grind,';
+function getTimeGreeting(h: number) {
+  if (h >= 5 && h < 9)  return 'Rise & Grind';
+  if (h >= 9 && h < 12) return 'Good Morning';
+  if (h >= 12 && h < 14) return 'Good Afternoon';
+  if (h >= 14 && h < 18) return 'Keep Pushing';
+  if (h >= 18 && h < 21) return 'Good Evening';
+  if (h >= 21)           return 'Still Hustling';
+  return 'Midnight Grind';
 }
 
-function getTimeSubtitle(hour: number): string {
-  if (hour >= 5 && hour < 9)  return 'Early birds catch the deals 🐦';
-  if (hour >= 9 && hour < 12) return "Let's make today count 🔥";
-  if (hour >= 12 && hour < 14) return 'Halfway through, keep going 💪';
-  if (hour >= 14 && hour < 18) return 'Afternoon grind hits different ⚡';
-  if (hour >= 18 && hour < 21) return 'Evening session, you showed up 🎯';
-  if (hour >= 21)              return 'Night owls build empires 🦉';
-  return 'While they sleep, you build 🌙';
+function getTimeEmoji(h: number) {
+  if (h >= 5 && h < 9)  return '🌅';
+  if (h >= 9 && h < 12) return '☕';
+  if (h >= 12 && h < 14) return '⚡';
+  if (h >= 14 && h < 18) return '🔥';
+  if (h >= 18 && h < 21) return '🌙';
+  if (h >= 21)           return '🦉';
+  return '🌙';
 }
 
 const QUICK_ACTIONS = [
-  { id: '1', title: 'Challenge', icon: 'flash', color: '#F59E0B', route: '/challenge' },
-  { id: '2', title: 'AI Coach', icon: 'chatbubbles', color: '#00D4FF', route: '/(tabs)/coach' },
-  { id: '3', title: 'Community', icon: 'people', color: '#8B5CF6', route: '/community' },
-  { id: '4', title: 'Analytics', icon: 'stats-chart', color: '#10B981', route: '/analytics' },
-] as const;
-
-const DAILY_CHALLENGE = {
-  title: 'Market Validation Sprint',
-  description: 'Complete 3 market research activities and validate one business idea.',
-  xp: 150,
-  timeLimit: '24h',
-};
+  { id: '1', title: 'Challenge', icon: 'flash', gradient: ['#F59E0B', '#EF4444'] as [string, string], route: '/challenge' },
+  { id: '2', title: 'AI Coach', icon: 'chatbubbles', gradient: ['#00D4FF', '#7C3AED'] as [string, string], route: '/(tabs)/coach' },
+  { id: '3', title: 'Community', icon: 'people', gradient: ['#8B5CF6', '#EC4899'] as [string, string], route: '/community' },
+  { id: '4', title: 'Analytics', icon: 'stats-chart', gradient: ['#10B981', '#059669'] as [string, string], route: '/analytics' },
+];
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const { profile, loading: profileLoading, refetch } = useProfile();
   const { tasks, loading: tasksLoading, toggleTask } = useDailyTasks();
   const [refreshing, setRefreshing] = useState(false);
   const [isPro, setIsPro] = useState(false);
-
   React.useEffect(() => { getIsPro().then(setIsPro); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetchProfile();
+    await refetch();
     setRefreshing(false);
-  }, [refetchProfile]);
+  }, [refetch]);
 
   const hour = new Date().getHours();
-  const greeting = getTimeGreeting(hour);
-  const subtitle = getTimeSubtitle(hour);
-
+  const firstName = profile?.name?.split(' ')[0] ?? 'there';
   const hustleScore = profile?.hustle_score ?? 0;
   const level = profile?.level ?? 1;
   const streak = profile?.streak ?? 0;
-  const firstName = profile?.name?.split(' ')[0] ?? 'there';
-  // Pro title: "FirstName Closer ⚡", free: "FirstName 👋"
-  const displayName = isPro ? `${firstName} Closer ⚡` : `${firstName} 👋`;
+  const completedTasks = tasks.filter(t => t.completed).length;
 
   return (
-    <ScreenWrapper scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background.primary }}
+      contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 100 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00D4FF" />}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>{greeting}</Text>
-          {profileLoading ? (
-            <View style={styles.skeletonName} />
-          ) : (
-            <>
-              <Text style={styles.userName}>
-                <Text style={styles.userNameFirst}>{firstName} </Text>
-                {isPro
-                  ? <Text style={styles.userNamePro}>Closer ⚡</Text>
-                  : <Text style={styles.userNameEmoji}>👋</Text>
-                }
-              </Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
-            </>
-          )}
-        </View>
-        <TouchableOpacity
-          style={styles.streakBadge}
-          onPress={() => router.push('/analytics')}
-        >
-          <Ionicons name="flame" size={20} color="#F59E0B" />
-          {profileLoading ? (
-            <View style={styles.skeletonStreak} />
-          ) : (
-            <Text style={styles.streakText}>{streak} day streak</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Hustle Score */}
-      <TouchableOpacity
-        style={styles.scoreCard}
-        onPress={() => router.push('/analytics')}
-        activeOpacity={0.8}
-      >
-        <View style={styles.scoreHeader}>
-          <View>
-            <Text style={styles.scoreLabel}>Hustle Score</Text>
+      <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.xxl }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...typography.small, color: colors.text.tertiary, letterSpacing: 0.5 }}>
+              {getTimeGreeting(hour)} {getTimeEmoji(hour)}
+            </Text>
             {profileLoading ? (
-              <View style={styles.skeletonScore} />
+              <View style={{ width: 140, height: 34, borderRadius: radius.sm, backgroundColor: colors.border.default, marginTop: 6 }} />
             ) : (
-              <Text style={styles.scoreValue}>{hustleScore.toLocaleString()}</Text>
+              <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.5, marginTop: 4 }}>
+                {firstName}
+                {isPro && <Text style={{ color: '#00D4FF' }}> Pro ⚡</Text>}
+              </Text>
             )}
           </View>
-          <View style={styles.levelBadge}>
-            <Ionicons name="trophy" size={16} color={colors.accent.primary} />
-            <Text style={styles.levelText}>Level {level}</Text>
-          </View>
+          <TouchableOpacity onPress={() => router.push('/analytics')} style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            backgroundColor: '#F59E0B18', paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+            borderRadius: radius.full, borderWidth: 1, borderColor: '#F59E0B30',
+          }}>
+            <Text style={{ fontSize: 16 }}>🔥</Text>
+            {profileLoading
+              ? <View style={{ width: 40, height: 14, borderRadius: 4, backgroundColor: '#F59E0B20' }} />
+              : <Text style={{ ...typography.smallMedium, color: '#F59E0B' }}>{streak}d streak</Text>
+            }
+          </TouchableOpacity>
         </View>
-        <ProgressBar
-          progress={(hustleScore % 1000) / 10}
-          showPercentage={false}
-          height={6}
-        />
-        <Text style={styles.xpToLevel}>{1000 - (hustleScore % 1000)} XP to next level</Text>
+      </View>
+
+      {/* Hustle Score Card — gradient border */}
+      <TouchableOpacity
+        onPress={() => router.push('/analytics')}
+        activeOpacity={0.9}
+        style={{ marginHorizontal: spacing.lg, marginBottom: spacing.lg }}
+      >
+        <LinearGradient
+          colors={['#00D4FF', '#7C3AED']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ borderRadius: radius.xl + 2, padding: 1.5 }}
+        >
+          <View style={{ backgroundColor: isDark ? '#0D1526' : colors.background.card, borderRadius: radius.xl, padding: spacing.xl }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg }}>
+              <View>
+                <Text style={{ ...typography.small, color: colors.text.tertiary, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                  Hustle Score
+                </Text>
+                {profileLoading ? (
+                  <View style={{ width: 100, height: 42, borderRadius: radius.sm, backgroundColor: colors.border.default, marginTop: 6 }} />
+                ) : (
+                  <Text style={{ fontSize: 42, fontWeight: '800', color: colors.text.primary, letterSpacing: -1, lineHeight: 50 }}>
+                    {hustleScore.toLocaleString()}
+                  </Text>
+                )}
+              </View>
+              <View style={{
+                backgroundColor: isDark ? '#00D4FF15' : '#00D4FF20',
+                borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+                borderWidth: 1, borderColor: '#00D4FF30',
+              }}>
+                <Text style={{ ...typography.captionMedium, color: '#00D4FF' }}>LVL {level}</Text>
+              </View>
+            </View>
+
+            {/* XP bar */}
+            <View style={{ height: 4, backgroundColor: colors.border.default, borderRadius: 2, marginBottom: spacing.sm }}>
+              <LinearGradient
+                colors={['#00D4FF', '#7C3AED']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ width: `${(hustleScore % 1000) / 10}%`, height: '100%', borderRadius: 2 }}
+              />
+            </View>
+            <Text style={{ ...typography.caption, color: colors.text.muted }}>
+              {1000 - (hustleScore % 1000)} XP to Level {level + 1}
+            </Text>
+          </View>
+        </LinearGradient>
       </TouchableOpacity>
 
-      {/* Daily Challenge */}
-      <SectionHeader title="Today's Challenge" actionText="View" onAction={() => router.push('/challenge')} />
+      {/* Daily Tasks strip */}
       <TouchableOpacity
-        style={styles.challengeCard}
-        onPress={() => router.push('/challenge')}
-        activeOpacity={0.8}
+        onPress={() => router.push('/tasks')}
+        activeOpacity={0.85}
+        style={{ marginHorizontal: spacing.lg, marginBottom: spacing.lg }}
       >
-        <View style={styles.challengeIcon}>
-          <Ionicons name="flash" size={28} color="#F59E0B" />
-        </View>
-        <View style={styles.challengeContent}>
-          <Text style={styles.challengeTitle}>{DAILY_CHALLENGE.title}</Text>
-          <Text style={styles.challengeDesc} numberOfLines={1}>{DAILY_CHALLENGE.description}</Text>
-          <View style={styles.challengeMeta}>
-            <Badge label={`+${DAILY_CHALLENGE.xp} XP`} variant="warning" size="small" />
-            <Text style={styles.challengeTime}>{DAILY_CHALLENGE.timeLimit}</Text>
+        <View style={{
+          backgroundColor: colors.background.card, borderRadius: radius.lg,
+          padding: spacing.lg, flexDirection: 'row', alignItems: 'center',
+          borderWidth: 1, borderColor: colors.border.default,
+        }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...typography.smallMedium, color: colors.text.secondary }}>Daily Tasks</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text.primary, marginTop: 2 }}>
+              {tasksLoading ? '—' : `${completedTasks}/${tasks.length}`}
+              <Text style={{ ...typography.small, color: colors.text.tertiary, fontWeight: '400' }}> done today</Text>
+            </Text>
           </View>
+          {/* Mini progress dots */}
+          <View style={{ flexDirection: 'row', gap: 4, marginRight: spacing.md }}>
+            {tasks.slice(0, 4).map((t, i) => (
+              <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.completed ? '#10B981' : colors.border.default }} />
+            ))}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
         </View>
-        <Ionicons name="play-circle" size={36} color={colors.accent.primary} />
       </TouchableOpacity>
 
       {/* Quick Actions */}
-      <SectionHeader title="Quick Actions" />
-      <View style={styles.quickActionsGrid}>
-        {QUICK_ACTIONS.map((action) => (
-          <TouchableOpacity
-            key={action.id}
-            style={styles.quickActionCard}
-            activeOpacity={0.7}
-            onPress={() => {
-              if (action.route) router.push(action.route as any);
-            }}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
-              <Ionicons name={action.icon as keyof typeof Ionicons.glyphMap} size={24} color={action.color} />
-            </View>
-            <Text style={styles.quickActionText}>{action.title}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+        <SectionHeader title="Quick Actions" />
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          {QUICK_ACTIONS.map(action => (
+            <TouchableOpacity
+              key={action.id}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(action.route as any); }}
+              activeOpacity={0.82}
+              style={{ flex: 1, borderRadius: radius.lg, overflow: 'hidden' }}
+            >
+              <LinearGradient
+                colors={action.gradient}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ padding: 1.2, borderRadius: radius.lg }}
+              >
+                <View style={{ backgroundColor: isDark ? '#0A0F1E' : colors.background.card, borderRadius: radius.lg - 1, alignItems: 'center', paddingVertical: spacing.lg }}>
+                  <Ionicons name={action.icon as any} size={22} color={action.gradient[0]} />
+                  <Text style={{ ...typography.caption, color: colors.text.secondary, marginTop: spacing.xs, textAlign: 'center' }}>
+                    {action.title}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
-      {/* Daily Tasks */}
-      <SectionHeader title="Daily Tasks" actionText="View All" onAction={() => router.push('/tasks')} />
-      <View style={styles.tasksContainer}>
-        {tasksLoading ? (
-          <View style={styles.loadingTasks}>
-            <ActivityIndicator color={colors.accent.primary} />
-          </View>
-        ) : tasks.length === 0 ? (
-          <View style={styles.emptyTasks}>
-            <Text style={styles.emptyTasksText}>No tasks for today yet.</Text>
-          </View>
-        ) : (
-          tasks.slice(0, 3).map((task, index) => (
-            <TouchableOpacity
-              key={task.id}
-              style={[styles.taskItem, index < Math.min(tasks.length, 3) - 1 && styles.taskDivider]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleTask(task.id); }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.taskCheck, task.completed && styles.taskCheckDone]}>
-                {task.completed && <Ionicons name="checkmark" size={14} color={colors.text.inverse} />}
+      {/* Today's Challenge */}
+      <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+        <SectionHeader title="Today's Challenge" actionText="View" onAction={() => router.push('/challenge')} />
+        <TouchableOpacity onPress={() => router.push('/challenge')} activeOpacity={0.85}>
+          <LinearGradient
+            colors={['#F59E0B18', '#EF444408']}
+            style={{ borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: '#F59E0B30' }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: '#F59E0B20', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="flash" size={24} color="#F59E0B" />
               </View>
-              <View style={styles.taskContent}>
-                <Text style={[styles.taskTitle, task.completed && styles.taskTitleDone]}>{task.title}</Text>
-                {task.description ? (
-                  <Text style={styles.taskDesc}>{task.description}</Text>
-                ) : null}
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.text.primary }}>Market Validation Sprint</Text>
+                <Text style={{ ...typography.small, color: colors.text.secondary, marginTop: 2 }}>
+                  Complete 3 research activities
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+                  <Badge label="+150 XP" variant="warning" size="small" />
+                  <Text style={{ ...typography.caption, color: colors.text.muted }}>24h left</Text>
+                </View>
               </View>
-              <Badge label={`+${task.xp}`} variant={task.completed ? 'success' : 'default'} size="small" />
-            </TouchableOpacity>
-          ))
-        )}
+              <Ionicons name="play-circle" size={32} color="#F59E0B" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
-    </ScreenWrapper>
+
+      {/* Tasks list */}
+      <View style={{ paddingHorizontal: spacing.lg }}>
+        <SectionHeader title="Daily Tasks" actionText="All" onAction={() => router.push('/tasks')} />
+        <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border.default }}>
+          {tasksLoading ? (
+            <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+              <ActivityIndicator color="#00D4FF" />
+            </View>
+          ) : tasks.length === 0 ? (
+            <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+              <Text style={{ fontSize: 28, marginBottom: spacing.sm }}>📋</Text>
+              <Text style={{ ...typography.body, color: colors.text.tertiary }}>No tasks yet — check back soon!</Text>
+            </View>
+          ) : (
+            tasks.slice(0, 3).map((task, i) => (
+              <TouchableOpacity
+                key={task.id}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', padding: spacing.lg,
+                  borderBottomWidth: i < Math.min(tasks.length, 3) - 1 ? 1 : 0,
+                  borderBottomColor: colors.border.default,
+                }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleTask(task.id); }}
+                activeOpacity={0.7}
+              >
+                {/* Checkbox */}
+                <View style={{
+                  width: 24, height: 24, borderRadius: 12,
+                  borderWidth: 2, borderColor: task.completed ? '#10B981' : colors.border.light,
+                  backgroundColor: task.completed ? '#10B981' : 'transparent',
+                  alignItems: 'center', justifyContent: 'center', marginRight: spacing.md,
+                }}>
+                  {task.completed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    ...typography.body, color: task.completed ? colors.text.tertiary : colors.text.primary,
+                    textDecorationLine: task.completed ? 'line-through' : 'none',
+                  }}>
+                    {task.title}
+                  </Text>
+                </View>
+                <View style={{
+                  backgroundColor: task.completed ? '#10B98118' : colors.background.tertiary,
+                  paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full,
+                }}>
+                  <Text style={{ ...typography.caption, color: task.completed ? '#10B981' : colors.text.muted, fontWeight: '600' }}>
+                    +{task.xp}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingTop: spacing.lg,
-  },
-  headerLeft: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  greeting: {
-    ...typography.body,
-    color: colors.text.secondary,
-  },
-  userName: {
-    ...typography.h1,
-    marginTop: spacing.xs,
-  },
-  userNameFirst: {
-    color: colors.text.primary,
-    fontWeight: '700',
-  },
-  userNamePro: {
-    color: colors.accent.primary,
-    fontWeight: '700',
-  },
-  userNameEmoji: {
-    color: colors.text.primary,
-  },
-  subtitle: {
-    ...typography.small,
-    color: colors.text.tertiary,
-    marginTop: spacing.xs,
-  },
-  skeletonName: {
-    width: 120,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.border.default,
-    marginTop: spacing.xs,
-  },
-  skeletonStreak: {
-    width: 80,
-    height: 16,
-    borderRadius: radius.sm,
-    backgroundColor: '#F59E0B40',
-  },
-  skeletonScore: {
-    width: 100,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.border.default,
-    marginTop: spacing.xs,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F59E0B20',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    gap: spacing.xs,
-  },
-  streakText: {
-    ...typography.smallMedium,
-    color: '#F59E0B',
-  },
-  scoreCard: {
-    backgroundColor: colors.background.elevated,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    marginTop: spacing.xxl,
-    borderWidth: 1,
-    borderColor: colors.border.default,
-  },
-  scoreHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.lg,
-  },
-  scoreLabel: {
-    ...typography.small,
-    color: colors.text.secondary,
-  },
-  scoreValue: {
-    ...typography.display,
-    color: colors.text.primary,
-    marginTop: spacing.xs,
-  },
-  levelBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: `${colors.accent.primary}20`,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    gap: spacing.xs,
-  },
-  levelText: {
-    ...typography.smallMedium,
-    color: colors.accent.primary,
-  },
-  xpToLevel: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-    marginTop: spacing.sm,
-  },
-  challengeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: '#F59E0B40',
-  },
-  challengeIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: '#F59E0B20',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-  },
-  challengeContent: {
-    flex: 1,
-  },
-  challengeTitle: {
-    ...typography.bodyMedium,
-    color: colors.text.primary,
-  },
-  challengeDesc: {
-    ...typography.small,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
-  },
-  challengeMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    gap: spacing.md,
-  },
-  challengeTime: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-  },
-  courseCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-  },
-  courseIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.lg,
-  },
-  courseContent: {
-    flex: 1,
-  },
-  courseTitle: {
-    ...typography.bodyMedium,
-    color: colors.text.primary,
-  },
-  courseLesson: {
-    ...typography.small,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
-  },
-  courseProgress: {
-    marginTop: spacing.md,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  quickActionCard: {
-    width: '48%',
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  quickActionText: {
-    ...typography.smallMedium,
-    color: colors.text.primary,
-  },
-  tasksContainer: {
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  loadingTasks: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyTasks: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyTasksText: {
-    ...typography.small,
-    color: colors.text.tertiary,
-  },
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  taskDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.default,
-  },
-  taskCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.full,
-    borderWidth: 2,
-    borderColor: colors.border.light,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  taskCheckDone: {
-    backgroundColor: colors.semantic.success,
-    borderColor: colors.semantic.success,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskTitle: {
-    ...typography.body,
-    color: colors.text.primary,
-  },
-  taskTitleDone: {
-    color: colors.text.secondary,
-    textDecorationLine: 'line-through',
-  },
-  taskDesc: {
-    ...typography.caption,
-    color: colors.text.tertiary,
-    marginTop: spacing.xs,
-  },
-});
