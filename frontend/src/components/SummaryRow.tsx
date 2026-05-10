@@ -28,7 +28,9 @@ export const SummaryRow: React.FC<SummaryRowProps> = ({
         ) : null}
         <Text style={styles.label}>{label}</Text>
       </View>
-      <Text style={styles.value} numberOfLines={2}>{value}</Text>
+      <View style={styles.valueWrap}>
+        <Text style={styles.value}>{value}</Text>
+      </View>
     </View>
   );
 };
@@ -59,11 +61,13 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     flex: 1,
   },
+  valueWrap: {
+    flex: 2,
+    alignItems: 'flex-end',
+  },
   value: {
     ...typography.bodyMedium,
     color: colors.text.primary,
-    flex: 2,
     textAlign: 'right',
-    flexWrap: 'wrap',
   },
 });

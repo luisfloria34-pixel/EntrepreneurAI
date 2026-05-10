@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader } from '../../src/components';
-import { colors, spacing, typography, radius } from '../../src/theme';
+import { spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/services/supabase';
 import { useAuth } from '../../src/context/AuthContext';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useLanguage } from '../../src/context/LanguageContext';
+import * as Haptics from 'expo-haptics';
 
 export default function PrivacySettingsScreen() {
   const router = useRouter();
   const { signOut, user } = useAuth();
   const { profile } = useProfile();
+  const { colors } = useTheme();
+  const { t } = useLanguage();
   const [analytics, setAnalytics] = useState(true);
   const [profilePublic, setProfilePublic] = useState(true);
   const [resetting, setResetting] = useState(false);
@@ -39,7 +44,6 @@ export default function PrivacySettingsScreen() {
       level: profile.level,
       streak: profile.streak,
       total_xp: profile.total_xp,
-      lessons_completed: profile.lessons_completed,
       created_at: profile.created_at,
     };
     Alert.alert('Your Data', JSON.stringify(data, null, 2));
@@ -48,7 +52,7 @@ export default function PrivacySettingsScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       'Delete Account',
-      'Permanently delete your account and all data? This cannot be undone.',
+      'Type DELETE to confirm permanent account deletion.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -65,119 +69,79 @@ export default function PrivacySettingsScreen() {
     );
   }
 
+  function SwitchRow({ title, sub, value, onVal, bordered }: { title: string; sub: string; value: boolean; onVal: (v: boolean) => void; bordered?: boolean }) {
+    return (
+      <View style={{
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        paddingVertical: spacing.lg,
+        borderTopWidth: bordered ? 1 : 0,
+        borderTopColor: colors.border.default,
+      }}>
+        <View style={{ flex: 1, marginRight: spacing.md }}>
+          <Text style={{ ...typography.body, color: colors.text.primary }}>{title}</Text>
+          <Text style={{ ...typography.caption, color: colors.text.secondary, marginTop: spacing.xs }}>{sub}</Text>
+        </View>
+        <Switch value={value} onValueChange={onVal}
+          trackColor={{ false: colors.background.tertiary, true: colors.accent.primary }}
+          thumbColor={colors.text.inverse} />
+      </View>
+    );
+  }
+
+  function ActionRow({ icon, label, onPress, destructive, loading: rowLoading, bordered }: {
+    icon: string; label: string; onPress: () => void; destructive?: boolean; loading?: boolean; bordered?: boolean;
+  }) {
+    const c = destructive ? colors.semantic.error : colors.text.primary;
+    return (
+      <TouchableOpacity
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, borderTopWidth: bordered ? 1 : 0, borderTopColor: colors.border.default }}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}>
+          <Ionicons name={icon as any} size={20} color={destructive ? colors.semantic.error : colors.text.secondary} />
+          <Text style={{ ...typography.body, color: c }}>{label}</Text>
+        </View>
+        {rowLoading
+          ? <ActivityIndicator size="small" color={c} />
+          : <Ionicons name="chevron-forward" size={18} color={destructive ? colors.semantic.error : colors.text.muted} />}
+      </TouchableOpacity>
+    );
+  }
+
+  function Label({ text }: { text: string }) {
+    return (
+      <Text style={{ ...typography.captionMedium, color: colors.text.tertiary, textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.xl, marginBottom: spacing.sm, marginLeft: spacing.xs }}>
+        {text}
+      </Text>
+    );
+  }
+
   return (
     <ScreenWrapper scroll>
-      <AppHeader showBack onBack={() => router.back()} title="Privacy & Security" />
+      <AppHeader showBack onBack={() => router.back()} title={t('titlePrivacy')} />
 
-      <Text style={styles.label}>Account Security</Text>
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.row} onPress={handleChangePassword} disabled={resetting}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="key-outline" size={20} color={colors.text.secondary} />
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Change Password</Text>
-              <Text style={styles.rowSub}>Send a reset link to your email</Text>
-            </View>
-          </View>
-          {resetting
-            ? <ActivityIndicator size="small" color={colors.accent.primary} />
-            : <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />}
-        </TouchableOpacity>
+      <Label text="Account Security" />
+      <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <ActionRow icon="key-outline" label="Change Password" onPress={handleChangePassword} loading={resetting} />
       </View>
 
-      <Text style={styles.label}>Privacy</Text>
-      <View style={styles.section}>
-        <View style={styles.switchRow}>
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>Public Profile</Text>
-            <Text style={styles.rowSub}>Let others see your profile</Text>
-          </View>
-          <Switch value={profilePublic} onValueChange={setProfilePublic}
-            trackColor={{ false: colors.background.tertiary, true: colors.accent.primary }}
-            thumbColor={colors.text.inverse} />
-        </View>
-        <View style={[styles.switchRow, styles.bordered]}>
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>Analytics</Text>
-            <Text style={styles.rowSub}>Help us improve with usage data</Text>
-          </View>
-          <Switch value={analytics} onValueChange={setAnalytics}
-            trackColor={{ false: colors.background.tertiary, true: colors.accent.primary }}
-            thumbColor={colors.text.inverse} />
-        </View>
+      <Label text="Privacy" />
+      <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <SwitchRow title="Public Profile" sub="Let others see your profile" value={profilePublic} onVal={setProfilePublic} />
+        <SwitchRow title="Analytics" sub="Help us improve with usage data" value={analytics} onVal={setAnalytics} bordered />
       </View>
 
-      <Text style={styles.label}>Data</Text>
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.row} onPress={handleDownloadData}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="download-outline" size={20} color={colors.text.secondary} />
-            <Text style={styles.rowTitle}>Download My Data</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.row, styles.bordered]} onPress={handleDeleteAccount} disabled={deleting}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="trash-outline" size={20} color={colors.semantic.error} />
-            <Text style={[styles.rowTitle, { color: colors.semantic.error }]}>Delete Account</Text>
-          </View>
-          {deleting
-            ? <ActivityIndicator size="small" color={colors.semantic.error} />
-            : <Ionicons name="chevron-forward" size={18} color={colors.semantic.error} />}
-        </TouchableOpacity>
+      <Label text="Data" />
+      <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <ActionRow icon="download-outline" label="Download My Data" onPress={handleDownloadData} />
+        <ActionRow icon="trash-outline" label="Delete Account" onPress={handleDeleteAccount} destructive loading={deleting} bordered />
       </View>
 
-      <Text style={styles.label}>Legal</Text>
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.row}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="document-text-outline" size={20} color={colors.text.secondary} />
-            <Text style={styles.rowTitle}>Privacy Policy</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.row, styles.bordered]}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="reader-outline" size={20} color={colors.text.secondary} />
-            <Text style={styles.rowTitle}>Terms of Service</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
-        </TouchableOpacity>
+      <Label text="Legal" />
+      <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <ActionRow icon="document-text-outline" label={t('titlePrivacyPolicy')} onPress={() => router.push('/settings/privacy-policy')} />
+        <ActionRow icon="reader-outline" label={t('titleTerms')} onPress={() => router.push('/settings/terms')} bordered />
       </View>
     </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  label: {
-    ...typography.captionMedium,
-    color: colors.text.tertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  section: {
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  bordered: { borderTopWidth: 1, borderTopColor: colors.border.default },
-  rowText: { flex: 1 },
-  rowTitle: { ...typography.body, color: colors.text.primary },
-  rowSub: { ...typography.caption, color: colors.text.secondary, marginTop: spacing.xs },
-});

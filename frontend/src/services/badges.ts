@@ -6,12 +6,11 @@ interface ProfileSnapshot {
 }
 
 async function awardBadge(userId: string, badgeId: string): Promise<void> {
-  await supabase
-    .from('user_badges')
-    .insert({ user_id: userId, badge_id: badgeId })
-    .throwOnError()
-    .then(() => {})
-    .catch(() => {});
+  try {
+    await supabase
+      .from('user_badges')
+      .insert({ user_id: userId, badge_id: badgeId });
+  } catch {}
 }
 
 async function getEarnedIds(userId: string): Promise<Set<string>> {

@@ -1,112 +1,96 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Share, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader } from '../../src/components';
-import { colors, spacing, typography, radius } from '../../src/theme';
+import { spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useLanguage } from '../../src/context/LanguageContext';
+import * as StoreReview from 'expo-store-review';
+import * as Haptics from 'expo-haptics';
 
 export default function AboutSettingsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const { t } = useLanguage();
+
+  async function handleRate() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (await StoreReview.hasAction()) {
+      await StoreReview.requestReview();
+    } else {
+      router.push('/settings/rate');
+    }
+  }
+
+  async function handleShare() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Share.share({
+      message: 'Check out EntrepreneurAI — the AI-powered app for entrepreneurs! 🚀',
+    });
+  }
+
+  async function handleInstagram() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Linking.openURL('https://www.instagram.com/fuelradar.app_');
+  }
+
+  function Row({ icon, label, onPress, color, last }: { icon: string; label: string; onPress: () => void; color?: string; last?: boolean }) {
+    return (
+      <TouchableOpacity
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingVertical: spacing.lg,
+          borderBottomWidth: last ? 0 : 1,
+          borderBottomColor: colors.border.default,
+        }}
+        onPress={onPress}
+      >
+        <Text style={{ ...typography.body, color: color ?? colors.text.primary }}>{label}</Text>
+        <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <ScreenWrapper scroll>
-      <AppHeader showBack onBack={() => router.back()} title="About" />
-      
-      <View style={styles.logoSection}>
-        <View style={styles.logoContainer}>
+      <AppHeader showBack onBack={() => router.back()} title={t('titleAbout')} />
+
+      <View style={{ alignItems: 'center', paddingVertical: spacing.xxxl }}>
+        <View style={{
+          width: 80, height: 80, borderRadius: radius.xl,
+          backgroundColor: `${colors.accent.primary}15`,
+          alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg,
+        }}>
           <Ionicons name="rocket" size={40} color={colors.accent.primary} />
         </View>
-        <Text style={styles.appName}>EntrepreneurAI</Text>
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={{ ...typography.h2, color: colors.text.primary }}>EntrepreneurAI</Text>
+        <Text style={{ ...typography.body, color: colors.text.secondary, marginTop: spacing.sm }}>Version 1.0.0</Text>
       </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.linkItem}>
-          <Text style={styles.linkText}>Rate the App</Text>
-          <Ionicons name="star-outline" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.linkItem, styles.itemBorder]}>
-          <Text style={styles.linkText}>Share with Friends</Text>
-          <Ionicons name="share-outline" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.linkItem, styles.itemBorder]}>
-          <Text style={styles.linkText}>Follow us on Twitter</Text>
-          <Ionicons name="logo-twitter" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
+      <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, paddingHorizontal: spacing.lg }}>
+        <Row icon="star-outline" label="Rate the App" onPress={handleRate} />
+        <Row icon="share-outline" label="Share with Friends" onPress={handleShare} />
+        <Row icon="logo-instagram" label="Follow on Instagram" onPress={handleInstagram} last />
       </View>
 
-      <View style={[styles.section, styles.sectionMargin]}>
-        <TouchableOpacity style={styles.linkItem}>
-          <Text style={styles.linkText}>Privacy Policy</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.linkItem, styles.itemBorder]}>
-          <Text style={styles.linkText}>Terms of Service</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.linkItem, styles.itemBorder]}>
-          <Text style={styles.linkText}>Licenses</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
-        </TouchableOpacity>
+      <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        <Row icon="document-text-outline" label={t('titlePrivacyPolicy')} onPress={() => router.push('/settings/privacy-policy')} />
+        <Row icon="reader-outline" label={t('titleTerms')} onPress={() => router.push('/settings/terms')} />
+        <Row icon="code-outline" label={t('titleLicenses')} onPress={() => router.push('/settings/licenses')} last />
       </View>
 
-      <Text style={styles.copyright}>
-        © 2025 EntrepreneurAI.{"\n"}All rights reserved.
+      <Text style={{
+        ...typography.caption,
+        color: colors.text.muted,
+        textAlign: 'center',
+        marginTop: spacing.xxxl,
+        lineHeight: 20,
+      }}>
+        © 2026 EntrepreneurAI.{'\n'}All rights reserved.
       </Text>
     </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  logoSection: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxxl,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.xl,
-    backgroundColor: `${colors.accent.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  appName: {
-    ...typography.h2,
-    color: colors.text.primary,
-  },
-  version: {
-    ...typography.body,
-    color: colors.text.secondary,
-    marginTop: spacing.sm,
-  },
-  section: {
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  sectionMargin: {
-    marginTop: spacing.lg,
-  },
-  linkItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  itemBorder: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border.default,
-  },
-  linkText: {
-    ...typography.body,
-    color: colors.text.primary,
-  },
-  copyright: {
-    ...typography.caption,
-    color: colors.text.muted,
-    textAlign: 'center',
-    marginTop: spacing.xxxl,
-    lineHeight: 20,
-  },
-});

@@ -1,10 +1,15 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { Platform, View } from 'react-native';
+import { typography, spacing } from '../../src/theme';
+import { Platform } from 'react-native';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
+  const { t } = useLanguage();
+
   return (
     <Tabs
       screenOptions={{
@@ -28,7 +33,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Home',
+          title: t('tabHome'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
           ),
@@ -37,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="coach"
         options={{
-          title: 'AI Coach',
+          title: t('tabCoach'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={24} color={color} />
           ),
@@ -46,7 +51,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="courses"
         options={{
-          title: 'Courses',
+          title: t('tabCourses'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'school' : 'school-outline'} size={24} color={color} />
           ),
@@ -55,7 +60,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabProfile'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
           ),

@@ -13,6 +13,7 @@ import { getIsPro } from '../../src/services/proStatus';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const FREE_MESSAGE_LIMIT = 5;
 const MSG_COUNT_KEY = 'coach_messages_count';
@@ -102,6 +103,7 @@ const dotStyles = StyleSheet.create({
 
 export default function CoachScreen() {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [inputText, setInputText] = useState('');
@@ -257,7 +259,7 @@ export default function CoachScreen() {
         content,
         imageUrl,
       }));
-      const reply = await sendMessage(history);
+      const reply = await sendMessage(history, language);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',

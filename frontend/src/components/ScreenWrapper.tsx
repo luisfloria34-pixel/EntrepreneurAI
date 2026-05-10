@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, StatusBar, ViewStyle, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { spacing } from '../theme';
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
@@ -12,7 +13,7 @@ interface ScreenWrapperProps {
   keyboardAvoiding?: boolean;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   bottomInset?: boolean;
-  refreshControl?: React.ReactElement;
+  refreshControl?: React.ReactElement<React.ComponentProps<typeof RefreshControl>>;
 }
 
 export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
@@ -27,14 +28,16 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   refreshControl,
 }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
-  const containerStyle = [
-    styles.container,
+  const containerStyle: ViewStyle[] = [
     {
+      flex: 1,
+      backgroundColor: colors.background.primary,
       paddingTop: edges.includes('top') ? insets.top : 0,
       paddingBottom: bottomInset ? insets.bottom : 0,
     },
-    style,
+    style as ViewStyle,
   ];
 
   const contentContainerStyle = [
@@ -61,7 +64,6 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
 
   return (
     <View style={containerStyle}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background.primary} />
       {keyboardAvoiding ? (
         <KeyboardAvoidingView
           style={styles.keyboard}
@@ -78,20 +80,8 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  content: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  padded: {
-    paddingHorizontal: spacing.lg,
-  },
-  keyboard: {
-    flex: 1,
-  },
+  content: { flex: 1 },
+  scroll: { flex: 1 },
+  padded: { paddingHorizontal: spacing.lg },
+  keyboard: { flex: 1 },
 });

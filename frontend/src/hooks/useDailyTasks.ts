@@ -57,24 +57,24 @@ export function useDailyTasks() {
       .eq('id', taskId);
 
     if (newCompleted) {
-      await supabase.rpc('increment_xp', { user_id: user.id, xp_amount: task.xp }).catch(() => {
-        supabase
+      try {
+        await supabase.rpc('increment_xp', { user_id: user.id, xp_amount: task.xp });
+      } catch {
+        const { data } = await supabase
           .from('profiles')
           .select('total_xp, hustle_score')
           .eq('id', user.id)
-          .single()
-          .then(({ data }) => {
-            if (data) {
-              supabase
-                .from('profiles')
-                .update({
-                  total_xp: data.total_xp + task.xp,
-                  hustle_score: data.hustle_score + task.xp,
-                })
-                .eq('id', user.id);
-            }
-          });
-      });
+          .single();
+        if (data) {
+          await supabase
+            .from('profiles')
+            .update({
+              total_xp: (data.total_xp ?? 0) + task.xp,
+              hustle_score: (data.hustle_score ?? 0) + task.xp,
+            })
+            .eq('id', user.id);
+        }
+      }
     }
   }, [tasks, user]);
 

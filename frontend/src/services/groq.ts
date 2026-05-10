@@ -4,8 +4,20 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const TEXT_MODEL = 'llama-3.3-70b-versatile';
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
-const SYSTEM_PROMPT =
+const BASE_SYSTEM_PROMPT =
   'You are an expert entrepreneur and business coach. Give concise, actionable advice. Max 3 sentences per response. Focus on practical steps.';
+
+function buildSystemPrompt(language?: string): string {
+  const langInstructions: Record<string, string> = {
+    de: 'Always respond in German (Deutsch).',
+    es: 'Always respond in Spanish (Español).',
+    fr: 'Always respond in French (Français).',
+    pt: 'Always respond in Portuguese (Português).',
+    en: '',
+  };
+  const langInstruction = language ? (langInstructions[language] ?? '') : '';
+  return langInstruction ? `${BASE_SYSTEM_PROMPT} ${langInstruction}` : BASE_SYSTEM_PROMPT;
+}
 
 export type GroqMessage = {
   role: 'user' | 'assistant';
@@ -28,7 +40,7 @@ function buildApiMessages(messages: GroqMessage[]) {
   });
 }
 
-export async function sendMessage(messages: GroqMessage[]): Promise<string> {
+export async function sendMessage(messages: GroqMessage[], language?: string): Promise<string> {
   if (!GROQ_API_KEY) {
     console.error('[Groq] EXPO_PUBLIC_GROQ_API_KEY is not set');
     throw new Error('Groq API key not configured');
@@ -39,7 +51,7 @@ export async function sendMessage(messages: GroqMessage[]): Promise<string> {
 
   const body = JSON.stringify({
     model,
-    messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...buildApiMessages(messages)],
+    messages: [{ role: 'system', content: buildSystemPrompt(language) }, ...buildApiMessages(messages)],
     max_tokens: 500,
   });
 

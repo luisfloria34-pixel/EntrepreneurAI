@@ -1,176 +1,114 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, SecondaryButton } from '../../src/components';
-import { colors, spacing, typography, radius } from '../../src/theme';
+import { spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useLanguage } from '../../src/context/LanguageContext';
+import * as StoreReview from 'expo-store-review';
+import * as Haptics from 'expo-haptics';
 
 export default function RateScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const { t } = useLanguage();
   const [rating, setRating] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = () => {
-    if (rating >= 4) {
-      Alert.alert(
-        'Thank you! 😍',
-        'We\'re so glad you\'re enjoying EntrepreneurAI! Your support means everything.',
-        [{ text: 'OK', onPress: () => router.back() }]
+  async function handleSubmit() {
+    if (rating === 0) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    if (rating >= 5) {
+      if (await StoreReview.hasAction()) {
+        await StoreReview.requestReview();
+      }
+      setSubmitted(true);
+    } else if (rating >= 1) {
+      Linking.openURL(
+        `mailto:support@entrepreneurai.com?subject=Feedback (${rating} stars)&body=Hi EntrepreneurAI team,%0D%0A%0D%0AHere is my feedback:%0D%0A`
       );
-    } else {
-      Alert.alert(
-        'Thank you for your feedback',
-        'We\'re constantly improving. What can we do better?',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      setSubmitted(true);
     }
-  };
+  }
+
+  const ratingLabel = rating === 5 ? '😍 Amazing!' : rating === 4 ? '😄 Great!' : rating === 3 ? '🙂 Good' : rating === 2 ? '😕 Okay' : rating === 1 ? '😞 Poor' : '';
+
+  if (submitted) {
+    return (
+      <ScreenWrapper>
+        <AppHeader title={t('titleRate')} showBack onBack={() => router.back()} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl }}>
+          <View style={{ width: 100, height: 100, borderRadius: radius.full, backgroundColor: `${colors.semantic.success}15`, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl }}>
+            <Ionicons name="checkmark-circle" size={60} color={colors.semantic.success} />
+          </View>
+          <Text style={{ ...typography.h2, color: colors.text.primary, textAlign: 'center' }}>Thank you! 🙏</Text>
+          <Text style={{ ...typography.body, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.md }}>
+            {rating >= 4 ? 'Your support means the world to us!' : 'Your feedback helps us improve!'}
+          </Text>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginTop: spacing.xxl }}>
+            <Text style={{ ...typography.bodyMedium, color: colors.accent.primary }}>{t('back')}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>
-      <AppHeader 
-        title="Rate EntrepreneurAI" 
-        showBack 
-        onBack={() => router.back()}
-      />
+      <AppHeader title={t('titleRate')} showBack onBack={() => router.back()} />
 
-      <View style={styles.content}>
-        <View style={styles.hero}>
-          <View style={styles.iconContainer}>
+      <View style={{ flex: 1, paddingTop: spacing.xxl }}>
+        <View style={{ alignItems: 'center', marginBottom: spacing.xxxl }}>
+          <View style={{ width: 100, height: 100, borderRadius: radius.full, backgroundColor: `${colors.semantic.error}15`, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl }}>
             <Ionicons name="heart" size={48} color={colors.semantic.error} />
           </View>
-          <Text style={styles.title}>Enjoying the app?</Text>
-          <Text style={styles.subtitle}>
-            Your rating helps us grow and reach more aspiring entrepreneurs!
+          <Text style={{ ...typography.h1, color: colors.text.primary, textAlign: 'center' }}>Enjoying the app?</Text>
+          <Text style={{ ...typography.body, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.md, paddingHorizontal: spacing.xxl }}>
+            Your rating helps us reach more aspiring entrepreneurs!
           </Text>
         </View>
 
-        {/* Star Rating */}
-        <View style={styles.starsContainer}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: spacing.lg }}>
           {[1, 2, 3, 4, 5].map((star) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={star}
-              onPress={() => setRating(star)}
-              style={styles.starButton}
+              onPress={() => { setRating(star); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              style={{ padding: spacing.sm }}
             >
-              <Ionicons 
-                name={star <= rating ? 'star' : 'star-outline'} 
-                size={40} 
-                color={star <= rating ? colors.semantic.warning : colors.text.muted} 
+              <Ionicons
+                name={star <= rating ? 'star' : 'star-outline'}
+                size={44}
+                color={star <= rating ? colors.semantic.warning : colors.text.muted}
               />
             </TouchableOpacity>
           ))}
         </View>
 
         {rating > 0 && (
-          <Text style={styles.ratingText}>
-            {rating === 5 ? '😍 Amazing!' : 
-             rating === 4 ? '😄 Great!' : 
-             rating === 3 ? '🙂 Good' : 
-             rating === 2 ? '😕 Okay' : '😞 Poor'}
+          <Text style={{ ...typography.h3, color: colors.text.primary, textAlign: 'center', marginBottom: spacing.xxl }}>
+            {ratingLabel}
           </Text>
         )}
 
-        {/* Stats */}
-        <View style={styles.statsCard}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>4.9</Text>
-            <Text style={styles.statLabel}>Average Rating</Text>
+        <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.xl, flexDirection: 'row' }}>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ ...typography.h2, color: colors.semantic.warning }}>4.9</Text>
+            <Text style={{ ...typography.caption, color: colors.text.secondary, marginTop: spacing.xs }}>Average Rating</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>12K+</Text>
-            <Text style={styles.statLabel}>Reviews</Text>
+          <View style={{ width: 1, backgroundColor: colors.border.default }} />
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ ...typography.h2, color: colors.semantic.warning }}>12K+</Text>
+            <Text style={{ ...typography.caption, color: colors.text.secondary, marginTop: spacing.xs }}>Reviews</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <PrimaryButton 
-          title="Submit Rating"
-          onPress={handleSubmit}
-          disabled={rating === 0}
-        />
-        <SecondaryButton 
-          title="Maybe Later"
-          onPress={() => router.back()}
-          style={styles.laterButton}
-        />
+      <View style={{ paddingVertical: spacing.lg }}>
+        <PrimaryButton title={t('submit')} onPress={handleSubmit} disabled={rating === 0} />
+        <SecondaryButton title={t('maybeLater')} onPress={() => router.back()} style={{ marginTop: spacing.md }} />
       </View>
     </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    paddingTop: spacing.xxl,
-  },
-  hero: {
-    alignItems: 'center',
-    marginBottom: spacing.xxxl,
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: radius.full,
-    backgroundColor: `${colors.semantic.error}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xxl,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  starButton: {
-    padding: spacing.sm,
-  },
-  ratingText: {
-    ...typography.h3,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.xxl,
-  },
-  statsCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.background.card,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-  },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border.default,
-  },
-  statValue: {
-    ...typography.h2,
-    color: colors.semantic.warning,
-  },
-  statLabel: {
-    ...typography.caption,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
-  },
-  footer: {
-    paddingVertical: spacing.lg,
-  },
-  laterButton: {
-    marginTop: spacing.md,
-  },
-});

@@ -1,28 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, Badge, ProgressBar } from '../../src/components';
-import { colors, spacing, typography, radius } from '../../src/theme';
+import { spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../src/services/supabase';
 import { checkAndAwardBadges } from '../../src/services/badges';
 import { useAuth } from '../../src/context/AuthContext';
-
-const LESSON_XP = 50;
+import { useTheme } from '../../src/context/ThemeContext';
+import { useLanguage } from '../../src/context/LanguageContext';
+import * as Haptics from 'expo-haptics';
 
 interface Lesson {
   id: string;
   course_id: string;
   title: string;
   description: string | null;
+  content: string | null;
+  video_url: string | null;
+  pdf_url: string | null;
   duration: string | null;
   order_index: number;
+  xp_reward: number;
 }
 
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const { t } = useLanguage();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [totalLessons, setTotalLessons] = useState(0);
@@ -47,13 +54,16 @@ export default function LessonScreen() {
     if (!data) return;
     setLesson(data);
 
-    const [totalRes, progressRes] = await Promise.all([
+    const [totalRes, progressRes, completedRes] = await Promise.all([
       supabase.from('lessons').select('id', { count: 'exact', head: true }).eq('course_id', data.course_id),
       supabase.from('lesson_progress').select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).eq('course_id', data.course_id),
+      supabase.from('lesson_progress').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('lesson_id', lessonId),
     ]);
     setTotalLessons(totalRes.count ?? 0);
     setCompletedCount(progressRes.count ?? 0);
+    setIsCompleted((completedRes.count ?? 0) > 0);
   }
 
   function showXPAnimation() {
@@ -69,12 +79,15 @@ export default function LessonScreen() {
   }
 
   async function handleMarkDone() {
-    if (!user || !lesson || saving) return;
+    if (!user || !lesson || saving || isCompleted) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSaving(true);
     try {
-      await supabase
-        .from('lesson_progress')
-        .upsert({ user_id: user.id, lesson_id: lesson.id, course_id: lesson.course_id });
+      await supabase.from('lesson_progress').upsert({
+        user_id: user.id,
+        lesson_id: lesson.id,
+        course_id: lesson.course_id,
+      });
 
       const newCompleted = completedCount + 1;
       const newProgress = totalLessons > 0 ? Math.round((newCompleted / totalLessons) * 100) : 0;
@@ -87,6 +100,7 @@ export default function LessonScreen() {
         updated_at: new Date().toISOString(),
       });
 
+      const xp = lesson.xp_reward ?? 50;
       const { data: prof } = await supabase
         .from('profiles')
         .select('hustle_score, total_xp, lessons_completed, streak')
@@ -96,14 +110,14 @@ export default function LessonScreen() {
       if (prof) {
         const newLessons = (prof.lessons_completed ?? 0) + 1;
         await supabase.from('profiles').update({
-          hustle_score: (prof.hustle_score ?? 0) + LESSON_XP,
-          total_xp: (prof.total_xp ?? 0) + LESSON_XP,
+          hustle_score: (prof.hustle_score ?? 0) + xp,
+          total_xp: (prof.total_xp ?? 0) + xp,
           lessons_completed: newLessons,
         }).eq('id', user.id);
 
         await supabase.from('xp_history').insert({
           user_id: user.id,
-          xp: LESSON_XP,
+          xp,
           reason: `Completed: ${lesson.title}`,
         });
 
@@ -124,84 +138,119 @@ export default function LessonScreen() {
   }
 
   const progress = totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0;
+  const xp = lesson?.xp_reward ?? 50;
 
   return (
     <ScreenWrapper edges={['top']} padded={false}>
-      <View style={styles.headerContainer}>
+      <View style={{ paddingHorizontal: spacing.lg, backgroundColor: colors.background.primary }}>
         <AppHeader showBack onBack={() => router.back()} rightIcon="bookmark-outline" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.videoContainer}>
-          <View style={styles.videoPlaceholder}>
-            <TouchableOpacity style={styles.playButton}>
-              <Ionicons name="play" size={40} color={colors.text.inverse} />
-            </TouchableOpacity>
-            {lesson?.duration && (
-              <Text style={styles.videoDuration}>{lesson.duration}</Text>
-            )}
-          </View>
-          <View style={styles.videoProgress}>
-            <View style={styles.videoProgressFill} />
-          </View>
-        </View>
-
-        <View style={styles.lessonInfo}>
-          <View style={styles.lessonMeta}>
-            <Badge label={lesson ? `Lesson ${lesson.order_index}` : 'Lesson'} size="small" />
-            {lesson?.duration && (
-              <View style={styles.duration}>
-                <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
-                <Text style={styles.durationText}>{lesson.duration}</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+        {/* Video area */}
+        <View style={{ aspectRatio: 16 / 9, backgroundColor: colors.background.secondary }}>
+          {lesson?.video_url ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.tertiary }}>
+              <TouchableOpacity style={{ width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center', paddingLeft: 4 }}>
+                <Ionicons name="play" size={36} color={colors.text.inverse} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.tertiary, gap: spacing.md }}>
+              <View style={{ width: 64, height: 64, borderRadius: radius.full, backgroundColor: `${colors.accent.primary}20`, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="videocam-outline" size={32} color={colors.accent.primary} />
               </View>
-            )}
-          </View>
-          <Text style={styles.lessonTitle}>{lesson?.title ?? '...'}</Text>
-          {lesson?.description && (
-            <Text style={styles.lessonDescription}>{lesson.description}</Text>
+              <Text style={{ ...typography.smallMedium, color: colors.text.secondary }}>Video coming soon</Text>
+              <Text style={{ ...typography.caption, color: colors.text.muted }}>Upload via Supabase Storage</Text>
+            </View>
+          )}
+          {lesson?.duration && (
+            <View style={{ position: 'absolute', bottom: spacing.md, right: spacing.md, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm }}>
+              <Text style={{ ...typography.caption, color: '#fff' }}>{lesson.duration}</Text>
+            </View>
           )}
         </View>
 
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Course Progress</Text>
-            <Text style={styles.progressText}>{completedCount} of {totalLessons}</Text>
+        <View style={{ padding: spacing.lg }}>
+          {/* Meta */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+            <Badge label={lesson ? `Lesson ${lesson.order_index}` : 'Lesson'} size="small" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              {lesson?.duration && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
+                  <Text style={{ ...typography.small, color: colors.text.tertiary }}>{lesson.duration}</Text>
+                </View>
+              )}
+              <Badge label={`+${xp} XP`} variant="success" size="small" />
+            </View>
           </View>
-          <ProgressBar progress={progress} height={6} showPercentage={false} />
-        </View>
 
-        <View style={styles.lessonContent}>
-          <Text style={styles.contentTitle}>In This Lesson</Text>
-          <View style={styles.contentList}>
-            <ContentItem icon="checkmark-circle" text="Key concepts and fundamentals" completed />
-            <ContentItem icon="checkmark-circle" text="Practical examples and case studies" completed />
-            <ContentItem icon="ellipse-outline" text="Interactive exercises" />
-            <ContentItem icon="ellipse-outline" text="Summary and key takeaways" />
+          <Text style={{ ...typography.h1, color: colors.text.primary }}>{lesson?.title ?? '...'}</Text>
+          {lesson?.description && (
+            <Text style={{ ...typography.body, color: colors.text.secondary, marginTop: spacing.md, lineHeight: 24 }}>
+              {lesson.description}
+            </Text>
+          )}
+
+          {/* Progress card */}
+          <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.xxl }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={{ ...typography.bodyMedium, color: colors.text.primary }}>Course Progress</Text>
+              <Text style={{ ...typography.small, color: colors.text.secondary }}>{completedCount} of {totalLessons}</Text>
+            </View>
+            <ProgressBar progress={progress} height={6} showPercentage={false} />
           </View>
-        </View>
 
-        <View style={styles.notesSection}>
-          <Text style={styles.notesTitle}>Your Notes</Text>
-          <TouchableOpacity style={styles.notesInput}>
-            <Ionicons name="create-outline" size={20} color={colors.text.tertiary} />
-            <Text style={styles.notesPlaceholder}>Tap to add notes for this lesson...</Text>
-          </TouchableOpacity>
+          {/* Lesson content */}
+          {lesson?.content && (
+            <View style={{ marginTop: spacing.xxl }}>
+              <Text style={{ ...typography.h3, color: colors.text.primary, marginBottom: spacing.lg }}>Lesson Content</Text>
+              <Text style={{ ...typography.body, color: colors.text.secondary, lineHeight: 26 }}>
+                {lesson.content}
+              </Text>
+            </View>
+          )}
+
+          {/* PDF section */}
+          {lesson?.pdf_url ? (
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.xxl }}
+            >
+              <Ionicons name="document-text-outline" size={24} color={colors.accent.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.text.primary }}>Download PDF Materials</Text>
+                <Text style={{ ...typography.small, color: colors.text.secondary, marginTop: spacing.xs }}>Tap to open</Text>
+              </View>
+              <Ionicons name="download-outline" size={20} color={colors.accent.primary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.xl, opacity: 0.6 }}>
+              <Ionicons name="document-text-outline" size={24} color={colors.text.muted} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.text.muted }}>PDF Materials Coming Soon</Text>
+                <Text style={{ ...typography.small, color: colors.text.muted, marginTop: spacing.xs }}>Upload via Supabase Storage</Text>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
+      {/* XP animation */}
       <Animated.View
-        style={[styles.xpBubble, { transform: [{ translateY: xpY }], opacity: xpOpacity }]}
+        style={{ position: 'absolute', bottom: 90, alignSelf: 'center', backgroundColor: colors.semantic.success, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.full, transform: [{ translateY: xpY }], opacity: xpOpacity }}
         pointerEvents="none"
       >
-        <Text style={styles.xpBubbleText}>+{LESSON_XP} XP 🎉</Text>
+        <Text style={{ ...typography.h3, color: colors.text.inverse }}>+{xp} XP 🎉</Text>
       </Animated.View>
 
-      <View style={styles.bottomCta}>
+      {/* Bottom CTA */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border.default, backgroundColor: colors.background.primary }}>
         {isCompleted ? (
           <PrimaryButton title="Back to Course" onPress={() => router.back()} />
         ) : (
           <PrimaryButton
-            title={saving ? 'Saving...' : 'Mark as Complete'}
+            title={saving ? t('savingBtn') : t('markComplete')}
             onPress={handleMarkDone}
             disabled={saving}
           />
@@ -210,80 +259,3 @@ export default function LessonScreen() {
     </ScreenWrapper>
   );
 }
-
-const ContentItem = ({ icon, text, completed }: {
-  icon: keyof typeof Ionicons.glyphMap; text: string; completed?: boolean;
-}) => (
-  <View style={styles.contentItem}>
-    <Ionicons name={icon} size={20} color={completed ? colors.semantic.success : colors.text.tertiary} />
-    <Text style={[styles.contentItemText, completed && styles.contentItemCompleted]}>{text}</Text>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  headerContainer: { paddingHorizontal: spacing.lg },
-  content: { paddingBottom: spacing.section },
-  videoContainer: { aspectRatio: 16 / 9, backgroundColor: colors.background.secondary },
-  videoPlaceholder: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.background.tertiary,
-  },
-  playButton: {
-    width: 72, height: 72, borderRadius: radius.full,
-    backgroundColor: colors.accent.primary, alignItems: 'center',
-    justifyContent: 'center', paddingLeft: 4,
-  },
-  videoDuration: {
-    ...typography.small, color: colors.text.secondary,
-    position: 'absolute', bottom: spacing.lg, right: spacing.lg,
-    backgroundColor: colors.background.overlay,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  videoProgress: { height: 4, backgroundColor: colors.background.tertiary },
-  videoProgressFill: { width: '35%', height: '100%', backgroundColor: colors.accent.primary },
-  lessonInfo: { padding: spacing.lg },
-  lessonMeta: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: spacing.lg,
-  },
-  duration: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  durationText: { ...typography.small, color: colors.text.tertiary },
-  lessonTitle: { ...typography.h1, color: colors.text.primary },
-  lessonDescription: { ...typography.body, color: colors.text.secondary, marginTop: spacing.md, lineHeight: 24 },
-  progressCard: {
-    backgroundColor: colors.background.card, borderRadius: radius.lg,
-    padding: spacing.lg, marginHorizontal: spacing.lg, marginBottom: spacing.xxl,
-  },
-  progressHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: spacing.md,
-  },
-  progressTitle: { ...typography.bodyMedium, color: colors.text.primary },
-  progressText: { ...typography.small, color: colors.text.secondary },
-  lessonContent: { paddingHorizontal: spacing.lg, marginBottom: spacing.xxl },
-  contentTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.lg },
-  contentList: { gap: spacing.lg },
-  contentItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  contentItemText: { ...typography.body, color: colors.text.secondary },
-  contentItemCompleted: { color: colors.text.primary },
-  notesSection: { paddingHorizontal: spacing.lg, marginBottom: spacing.xxl },
-  notesTitle: { ...typography.h3, color: colors.text.primary, marginBottom: spacing.md },
-  notesInput: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg,
-  },
-  notesPlaceholder: { ...typography.body, color: colors.text.tertiary },
-  xpBubble: {
-    position: 'absolute', bottom: 90, alignSelf: 'center',
-    backgroundColor: colors.semantic.success,
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
-    borderRadius: radius.full,
-  },
-  xpBubbleText: { ...typography.h3, color: colors.text.inverse },
-  bottomCta: {
-    padding: spacing.lg, borderTopWidth: 1,
-    borderTopColor: colors.border.default,
-    backgroundColor: colors.background.primary,
-  },
-});

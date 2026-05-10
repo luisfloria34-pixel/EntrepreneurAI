@@ -97,6 +97,12 @@ export default function SettingsScreen() {
       <Text style={styles.sectionLabel}>Preferences</Text>
       <View style={styles.section}>
         <ListItem
+          title="Theme"
+          subtitle="Dark, light, or system"
+          leftIcon="moon-outline"
+          onPress={() => router.push('/settings/theme')}
+        />
+        <ListItem
           title="Learning Goals"
           subtitle="Daily and weekly targets"
           leftIcon="flag-outline"
