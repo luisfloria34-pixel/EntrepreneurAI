@@ -9,7 +9,7 @@ import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { sendMessage, GroqMessage } from '../../src/services/groq';
-import { getIsPro } from '../../src/services/proStatus';
+import { usePurchases } from '../../src/context/PurchasesContext';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -112,14 +112,11 @@ export default function CoachScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [userMessageCount, setUserMessageCount] = useState(0);
-  const [isPro, setIsPro] = useState(true);
+  const { isPro } = usePurchases();
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    Promise.all([getIsPro(), getDailyCount()]).then(([pro, count]) => {
-      setIsPro(pro);
-      setUserMessageCount(count);
-    });
+    getDailyCount().then(setUserMessageCount);
   }, []);
 
   // Load last conversation from Supabase on mount
