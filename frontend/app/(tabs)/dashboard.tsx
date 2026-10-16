@@ -98,6 +98,13 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      <TouchableOpacity onPress={() => router.push('/business-quiz')} style={{ marginHorizontal: spacing.lg, marginBottom: spacing.lg, backgroundColor: '#102C40', borderRadius: 20, padding: 20 }}>
+        <Text style={{ color: '#67E8F9', fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>NEW · BUSINESS ACADEMY</Text>
+        <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900', marginTop: 6 }}>Learn business by playing 🚀</Text>
+        <Text style={{ color: '#CBD5E1', marginTop: 8 }}>Quick interactive challenges · 2 minutes</Text>
+        <Text style={{ color: '#67E8F9', fontWeight: '800', marginTop: 12 }}>Start a challenge →</Text>
+      </TouchableOpacity>
+
       {/* Hustle Score Card — gradient border */}
       <TouchableOpacity
         onPress={() => router.push('/analytics')}
