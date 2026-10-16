@@ -10,13 +10,12 @@ import { useProfile } from '../../src/hooks/useProfile';
 import { useProofs } from '../../src/hooks/useProofs';
 import { useBadges } from '../../src/hooks/useBadges';
 import { useAuth } from '../../src/context/AuthContext';
-import { getIsPro } from '../../src/services/proStatus';
+import { usePurchases } from '../../src/context/PurchasesContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { signOut, user } = useAuth();
-  const [isPro, setIsPro] = React.useState(false);
-  React.useEffect(() => { getIsPro().then(setIsPro); }, []);
+  const { isPro } = usePurchases();
   const { profile, loading: profileLoading } = useProfile();
   const { proofs, loading: proofsLoading } = useProofs();
   const { badges, earnedCount, loading: badgesLoading } = useBadges();
