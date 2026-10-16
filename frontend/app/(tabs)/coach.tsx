@@ -215,14 +215,7 @@ export default function CoachScreen() {
     if (!inputText.trim() && !selectedImage) return;
     if (isTyping) return;
 
-    if (!isPro && userMessageCount >= FREE_MESSAGE_LIMIT) {
-      router.push({
-        pathname: '/paywall',
-        params: { message: "You've used your 5 daily AI messages" },
-      });
-      return;
-    }
-
+    // The server enforces the authoritative daily limit.
     let uploadedUrl: string | undefined;
 
     if (selectedImage) {
@@ -247,7 +240,6 @@ export default function CoachScreen() {
     setInputText('');
     setSelectedImage(null);
     setIsTyping(true);
-    incrementDailyCount().then(setUserMessageCount);
     scrollRef.current?.scrollToEnd({ animated: true });
 
     try {
@@ -257,6 +249,7 @@ export default function CoachScreen() {
         imageUrl,
       }));
       const reply = await sendMessage(history, language);
+      incrementDailyCount().then(setUserMessageCount);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -266,13 +259,15 @@ export default function CoachScreen() {
       const finalMessages = [...updatedMessages, aiResponse];
       setMessages(finalMessages);
       await saveConversation(finalMessages);
-    } catch {
+    } catch (error) {
+      const limited = error instanceof Error && error.message === 'DAILY_LIMIT';
+      if (limited) Alert.alert('Daily limit reached', 'You have used your 5 free AI messages today. Upgrade to continue.');
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: "I'm having trouble connecting right now. Please check your connection and try again.",
+          content: limited ? 'Daily limit reached. Upgrade to Pro to continue.' : "I'm having trouble connecting right now. Please check your connection and try again.",
           timestamp: new Date(),
         },
       ]);
@@ -439,14 +434,14 @@ export default function CoachScreen() {
             </TouchableOpacity>
 
             <RNTextInput
-              style={[styles.input, !isPro && userMessageCount >= FREE_MESSAGE_LIMIT && styles.inputDisabled]}
-              placeholder={!isPro && userMessageCount >= FREE_MESSAGE_LIMIT ? "Daily limit reached — upgrade for unlimited" : "Ask your AI coach anything..."}
+              style={[styles.input, false && styles.inputDisabled]}
+              placeholder={"Ask your AI coach anything..."}
               placeholderTextColor={colors.text.muted}
               value={inputText}
               onChangeText={setInputText}
               multiline
               maxLength={500}
-              editable={isPro || userMessageCount < FREE_MESSAGE_LIMIT}
+              editable={!isTyping}
             />
 
             <TouchableOpacity
