@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  Animated, Switch, Dimensions, useWindowDimensions,
+  Animated, useWindowDimensions, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, radius } from '../src/theme';
 import { useTheme } from '../src/context/ThemeContext';
-import { activatePro } from '../src/services/proStatus';
+import { usePurchases } from '../src/context/PurchasesContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
@@ -77,9 +77,10 @@ export default function PaywallScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { offering, purchase, restore, loading: purchasesLoading } = usePurchases();
 
   const [selectedPlan, setSelectedPlan] = useState<string>('yearly');
-  const [trialOn, setTrialOn] = useState(true);
+
   const [benefitIdx, setBenefitIdx] = useState(0);
   const [purchasing, setPurchasing] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -91,22 +92,28 @@ export default function PaywallScreen() {
   }, []);
 
   const plan = PLANS.find(p => p.id === selectedPlan)!;
+  const packages = offering?.availablePackages ?? [];
+  const findPackage = (id: string) => packages.find(pkg => pkg.identifier === id || pkg.packageType.toLowerCase() === (id === 'lifetime' ? 'lifetime' : id === 'yearly' ? 'annual' : id));
+  const selectedPackage = findPackage(selectedPlan);
+  const intro = selectedPackage?.product.introPrice;
+  const hasTrial = !!intro && intro.price === 0;
   const isYearly = selectedPlan === 'yearly';
   const isLifetime = selectedPlan === 'lifetime';
 
-  const ctaLabel = isLifetime
-    ? `Get Lifetime – ${plan.price}`
-    : trialOn && isYearly
-    ? `Start Free Trial → ${plan.price}/yr after`
-    : `Get Pro – ${plan.price}${plan.period}`;
+  const ctaLabel = selectedPackage
+    ? `Get Pro – ${selectedPackage.product.priceString}`
+    : 'Plan unavailable';
 
   async function handlePurchase() {
+    if (purchasing || !selectedPackage) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPurchasing(true);
-    await new Promise(r => setTimeout(r, 900));
-    await activatePro();
-    setPurchasing(false);
-    setSuccess(true);
+    try {
+      const confirmed = await purchase(selectedPackage);
+      if (confirmed) setSuccess(true);
+    } finally {
+      setPurchasing(false);
+    }
   }
 
   function handleSuccessDone() {
@@ -151,23 +158,8 @@ export default function PaywallScreen() {
             Unlock Your Full{'\n'}Potential
           </Text>
           <Text style={{ ...typography.body, color: colors.text.secondary, textAlign: 'center' }}>
-            Join 10,000+ entrepreneurs already building
+            Build your business with guided tools and coaching
           </Text>
-        </View>
-
-        {/* Social proof */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.lg, marginBottom: spacing.xxl }}>
-          <View style={{ flexDirection: 'row' }}>
-            {['#F59E0B', '#10B981', '#8B5CF6', '#EC4899'].map((c, i) => (
-              <View key={i} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, marginLeft: i > 0 ? -8 : 0, borderWidth: 2, borderColor: isDark ? '#08090F' : '#fff', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{['A', 'B', 'C', 'D'][i]}</Text>
-              </View>
-            ))}
-          </View>
-          <View>
-            <Text style={{ fontSize: 13, color: colors.text.primary, fontWeight: '700' }}>⭐ 4.9 · 2,400 ratings</Text>
-            <Text style={{ ...typography.caption, color: colors.text.tertiary }}>App Store & Google Play</Text>
-          </View>
         </View>
 
         {/* Cycling benefits */}
@@ -202,10 +194,10 @@ export default function PaywallScreen() {
                         </LinearGradient>
                       )}
                       <Text style={{ ...typography.caption, color: '#00D4FF', marginBottom: 4, fontWeight: '600' }}>{p.label}</Text>
-                      <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>{p.price}</Text>
+                      <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>{findPackage(p.id)?.product.priceString ?? '—'}</Text>
                       <Text style={{ ...typography.caption, color: colors.text.tertiary }}>{p.period}</Text>
-                      {p.sub && <Text style={{ ...typography.caption, color: '#00D4FF', marginTop: 2 }}>{p.sub}</Text>}
-                      {'savings' in p && p.savings && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
+                      {false && p.sub && <Text style={{ ...typography.caption, color: '#00D4FF', marginTop: 2 }}>{p.sub}</Text>}
+                      {false && 'savings' in p && p.savings && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
                     </View>
                   </LinearGradient>
                 ) : (
@@ -216,10 +208,10 @@ export default function PaywallScreen() {
                       </View>
                     )}
                     <Text style={{ ...typography.caption, color: colors.text.tertiary, marginBottom: 4 }}>{p.label}</Text>
-                    <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>{p.price}</Text>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>{findPackage(p.id)?.product.priceString ?? '—'}</Text>
                     <Text style={{ ...typography.caption, color: colors.text.muted }}>{p.period}</Text>
-                    {p.sub && <Text style={{ ...typography.caption, color: colors.text.muted, marginTop: 2 }}>{p.sub}</Text>}
-                    {'savings' in p && p.savings && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
+                    {false && p.sub && <Text style={{ ...typography.caption, color: colors.text.muted, marginTop: 2 }}>{p.sub}</Text>}
+                    {false && 'savings' in p && p.savings && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
                   </View>
                 )}
               </TouchableOpacity>
@@ -227,19 +219,16 @@ export default function PaywallScreen() {
           })}
         </View>
 
-        {/* Free trial toggle */}
-        {isYearly && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border.default }}>
-            <View style={{ flex: 1, marginRight: spacing.lg }}>
-              <Text style={{ ...typography.bodyMedium, color: colors.text.primary }}>7-day free trial</Text>
-              <Text style={{ ...typography.caption, color: colors.text.tertiary, marginTop: 2 }}>Cancel anytime. No charge today.</Text>
-            </View>
-            <Switch value={trialOn} onValueChange={v => { Haptics.selectionAsync(); setTrialOn(v); }} trackColor={{ false: colors.border.default, true: '#00D4FF' }} thumbColor="#fff" />
+        {/* Store-controlled introductory offers: no fake trial switch. */}
+        {isYearly && hasTrial && (
+          <View style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg }}>
+            <Text style={{ ...typography.bodyMedium, color: colors.text.primary }}>Free trial available</Text>
+            <Text style={{ ...typography.caption, color: colors.text.secondary }}>Trial eligibility and billing are determined by the App Store / Google Play. Confirm the terms in the purchase sheet.</Text>
           </View>
         )}
 
         {/* CTA */}
-        <TouchableOpacity onPress={handlePurchase} disabled={purchasing} activeOpacity={0.88} style={{ marginBottom: spacing.lg }}>
+        <TouchableOpacity onPress={handlePurchase} disabled={purchasing || purchasesLoading || !selectedPackage} activeOpacity={0.88} style={{ marginBottom: spacing.lg }}>
           <LinearGradient colors={['#00D4FF', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: radius.xl, paddingVertical: spacing.xl, paddingHorizontal: spacing.xxl, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: spacing.sm }}>
             <Text style={{ fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: -0.2 }}>
               {purchasing ? 'Processing...' : ctaLabel}
@@ -248,57 +237,16 @@ export default function PaywallScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Timeline (yearly+trial) */}
-        {isYearly && trialOn && (
-          <View style={{ backgroundColor: colors.background.card, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border.default }}>
-            {[
-              { dot: '🟢', day: 'Today', text: 'Trial starts, full access unlocked' },
-              { dot: '🟡', day: 'Day 5', text: 'Reminder before trial ends' },
-              { dot: '🔵', day: 'Day 7', text: '€39.99/year billing begins' },
-            ].map((row, i, arr) => (
-              <React.Fragment key={row.day}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-                  <Text style={{ fontSize: 16, marginTop: 2 }}>{row.dot}</Text>
-                  <View>
-                    <Text style={{ ...typography.smallMedium, color: colors.text.primary }}>{row.day}</Text>
-                    <Text style={{ ...typography.small, color: colors.text.secondary, marginTop: 2 }}>{row.text}</Text>
-                  </View>
-                </View>
-                {i < arr.length - 1 && <View style={{ width: 2, height: 18, backgroundColor: colors.border.default, marginLeft: 7, marginVertical: 4 }} />}
-              </React.Fragment>
-            ))}
-          </View>
-        )}
-
-        {/* Testimonials */}
-        <View style={{ gap: spacing.md, marginBottom: spacing.xxl }}>
-          {TESTIMONIALS.map(t => (
-            <View key={t.name} style={{ backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border.default }}>
-              <Text style={{ ...typography.small, color: colors.text.secondary, lineHeight: 20, marginBottom: spacing.sm }}>"{t.text}"</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Text style={{ fontSize: 24 }}>{t.avatar}</Text>
-                <View>
-                  <Text style={{ ...typography.smallMedium, color: colors.text.primary }}>{t.name}</Text>
-                  <Text style={{ ...typography.caption, color: colors.text.tertiary }}>{t.role}</Text>
-                </View>
-                <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                  <Text style={{ fontSize: 12 }}>⭐⭐⭐⭐⭐</Text>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View>
-
         {/* Trust */}
         <View style={{ alignItems: 'center', gap: spacing.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Ionicons name="lock-closed" size={12} color={colors.text.muted} />
-            <Text style={{ ...typography.caption, color: colors.text.muted }}>Secure payment · Cancel anytime · No hidden fees</Text>
+            <Text style={{ ...typography.caption, color: colors.text.muted }}>Secure store payment · Manage subscriptions in your store account</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-            {['Restore', 'Terms', 'Privacy'].map(lnk => (
-              <TouchableOpacity key={lnk}><Text style={{ ...typography.caption, color: colors.text.muted }}>{lnk}</Text></TouchableOpacity>
-            ))}
+            <TouchableOpacity onPress={() => restore()}><Text style={{ ...typography.caption, color: colors.text.muted }}>Restore purchases</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/settings/terms')}><Text style={{ ...typography.caption, color: colors.text.muted }}>Terms</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/settings/privacy-policy')}><Text style={{ ...typography.caption, color: colors.text.muted }}>Privacy</Text></TouchableOpacity>
           </View>
           <TouchableOpacity onPress={() => router.replace('/(tabs)/dashboard')} style={{ paddingVertical: spacing.md }}>
             <Text style={{ ...typography.small, color: colors.text.muted }}>Maybe later</Text>
