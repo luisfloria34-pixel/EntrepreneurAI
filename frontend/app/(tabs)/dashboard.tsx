@@ -7,7 +7,7 @@ import { spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../../src/hooks/useProfile';
 import { useDailyTasks } from '../../src/hooks/useDailyTasks';
-import { getIsPro } from '../../src/services/proStatus';
+import { usePurchases } from '../../src/context/PurchasesContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -46,8 +46,7 @@ export default function DashboardScreen() {
   const { profile, loading: profileLoading, refetch } = useProfile();
   const { tasks, loading: tasksLoading, toggleTask } = useDailyTasks();
   const [refreshing, setRefreshing] = useState(false);
-  const [isPro, setIsPro] = useState(false);
-  React.useEffect(() => { getIsPro().then(setIsPro); }, []);
+  const { isPro } = usePurchases();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
