@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from './AuthContext';
+import { initializePurchases, loginUser } from '../services/revenuecat';
 import { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import {
@@ -50,6 +51,8 @@ export function PurchasesProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
+      initializePurchases();
+      await loginUser(user.id);
       const [info, off] = await Promise.all([getCustomerInfo(), getOfferings()]);
       setCustomerInfo(info);
       setOffering(off);
