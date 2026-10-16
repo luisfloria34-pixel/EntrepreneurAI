@@ -6,7 +6,7 @@ import { ScreenWrapper, AppHeader, ProgressBar, Badge, SectionHeader } from '../
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useCourses, CourseWithProgress } from '../../src/hooks/useCourses';
-import { getIsPro } from '../../src/services/proStatus';
+import { usePurchases } from '../../src/context/PurchasesContext';
 
 const FREE_COURSE_LIMIT = 2;
 
