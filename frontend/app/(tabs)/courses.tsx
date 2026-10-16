@@ -43,13 +43,15 @@ export default function CoursesScreen() {
           {inProgress.length > 0 && (
             <>
               <SectionHeader title="In Progress" />
-              {inProgress.map((course) => (
-                <CourseCard
+              {inProgress.map((course) => {
+                const locked = !isPro && courses.findIndex(c => c.id === course.id) >= FREE_COURSE_LIMIT;
+                return <CourseCard
                   key={course.id}
                   course={course}
-                  onPress={() => router.push(`/course/${course.id}`)}
-                />
-              ))}
+                  locked={locked}
+                  onPress={() => locked ? router.push('/paywall') : router.push(`/course/${course.id}`)}
+                />;
+              })}
             </>
           )}
 
