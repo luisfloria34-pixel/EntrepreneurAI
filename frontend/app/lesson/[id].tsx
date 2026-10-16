@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Alert, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader, PrimaryButton, Badge, ProgressBar } from '../../src/components';
 import { spacing, typography, radius } from '../../src/theme';
@@ -64,6 +64,13 @@ export default function LessonScreen() {
     setTotalLessons(totalRes.count ?? 0);
     setCompletedCount(progressRes.count ?? 0);
     setIsCompleted((completedRes.count ?? 0) > 0);
+  }
+
+  async function openResource(url: string) {
+    try {
+      if (!/^https:\/\//i.test(url)) throw new Error('Invalid resource URL');
+      await Linking.openURL(url);
+    } catch { Alert.alert('Cannot open resource', 'Please try again later.'); }
   }
 
   function showXPAnimation() {
@@ -151,7 +158,7 @@ export default function LessonScreen() {
         <View style={{ aspectRatio: 16 / 9, backgroundColor: colors.background.secondary }}>
           {lesson?.video_url ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.tertiary }}>
-              <TouchableOpacity style={{ width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center', paddingLeft: 4 }}>
+              <TouchableOpacity onPress={() => openResource(lesson.video_url!)} style={{ width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.accent.primary, alignItems: 'center', justifyContent: 'center', paddingLeft: 4 }}>
                 <Ionicons name="play" size={36} color={colors.text.inverse} />
               </TouchableOpacity>
             </View>
@@ -215,6 +222,7 @@ export default function LessonScreen() {
           {/* PDF section */}
           {lesson?.pdf_url ? (
             <TouchableOpacity
+              onPress={() => openResource(lesson.pdf_url!)}
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.background.card, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.xxl }}
             >
               <Ionicons name="document-text-outline" size={24} color={colors.accent.primary} />
