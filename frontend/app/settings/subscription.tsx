@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { ScreenWrapper, AppHeader } from '../../src/components';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { getIsPro, deactivatePro } from '../../src/services/proStatus';
+import { usePurchases } from '../../src/context/PurchasesContext';
 
 const LOCKED_FEATURES = [
   { icon: 'chatbubbles-outline', text: 'Unlimited AI Coach messages' },
@@ -17,12 +17,7 @@ const LOCKED_FEATURES = [
 
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const [isPro, setIsPro] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getIsPro().then(v => { setIsPro(v); setLoading(false); });
-  }, []);
+  const { isPro, loading, restore, customerInfo } = usePurchases();
 
   function handleCancel() {
     Alert.alert(
@@ -68,7 +63,7 @@ export default function SubscriptionScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.restoreBtn} onPress={() => Alert.alert('Purchases Restored', 'Your purchases have been restored.')}>
+          <TouchableOpacity style={styles.restoreBtn} onPress={() => restore()}>
             <Ionicons name="refresh-outline" size={18} color={colors.accent.primary} />
             <Text style={styles.restoreBtnText}>Restore Purchase</Text>
           </TouchableOpacity>
@@ -106,7 +101,7 @@ export default function SubscriptionScreen() {
             <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.restoreBtn} onPress={() => Alert.alert('Purchases Restored', 'No active subscription found.')}>
+          <TouchableOpacity style={styles.restoreBtn} onPress={() => restore()}>
             <Ionicons name="refresh-outline" size={18} color={colors.text.secondary} />
             <Text style={[styles.restoreBtnText, { color: colors.text.secondary }]}>Restore Purchase</Text>
           </TouchableOpacity>
