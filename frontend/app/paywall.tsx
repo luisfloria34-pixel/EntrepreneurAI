@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
   Animated, useWindowDimensions, Alert,
@@ -98,7 +98,6 @@ export default function PaywallScreen() {
   const intro = selectedPackage?.product.introPrice;
   const hasTrial = !!intro && intro.price === 0;
   const isYearly = selectedPlan === 'yearly';
-  const isLifetime = selectedPlan === 'lifetime';
 
   const ctaLabel = selectedPackage
     ? `Get Pro – ${selectedPackage.product.priceString}`
@@ -196,8 +195,8 @@ export default function PaywallScreen() {
                       <Text style={{ ...typography.caption, color: '#00D4FF', marginBottom: 4, fontWeight: '600' }}>{p.label}</Text>
                       <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>{findPackage(p.id)?.product.priceString ?? '—'}</Text>
                       <Text style={{ ...typography.caption, color: colors.text.tertiary }}>{p.period}</Text>
-                      {false && p.sub && <Text style={{ ...typography.caption, color: '#00D4FF', marginTop: 2 }}>{p.sub}</Text>}
-                      {false && 'savings' in p && p.savings && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
+                      {p.sub && false && <Text style={{ ...typography.caption, color: '#00D4FF', marginTop: 2 }}>{p.sub}</Text>}
+                      {false && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
                     </View>
                   </LinearGradient>
                 ) : (
@@ -210,8 +209,8 @@ export default function PaywallScreen() {
                     <Text style={{ ...typography.caption, color: colors.text.tertiary, marginBottom: 4 }}>{p.label}</Text>
                     <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary }}>{findPackage(p.id)?.product.priceString ?? '—'}</Text>
                     <Text style={{ ...typography.caption, color: colors.text.muted }}>{p.period}</Text>
-                    {false && p.sub && <Text style={{ ...typography.caption, color: colors.text.muted, marginTop: 2 }}>{p.sub}</Text>}
-                    {false && 'savings' in p && p.savings && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
+                    {p.sub && false && <Text style={{ ...typography.caption, color: colors.text.muted, marginTop: 2 }}>{p.sub}</Text>}
+                    {false && <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', marginTop: 2 }}>{p.savings}</Text>}
                   </View>
                 )}
               </TouchableOpacity>
