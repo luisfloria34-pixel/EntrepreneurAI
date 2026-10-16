@@ -14,7 +14,7 @@ import { PurchasesProvider } from '../src/context/PurchasesContext';
 const PROTECTED_SEGMENTS = new Set([
   '(tabs)', 'challenge', 'tasks', 'community', 'analytics',
   'badges', 'badge', 'settings', 'proofs', 'proof-upload',
-  'lesson', 'course', 'getting-started',
+  'lesson', 'course', 'getting-started', 'business-quiz',
 ]);
 
 function RootLayoutNav() {
@@ -94,6 +94,7 @@ function RootLayoutNav() {
         <Stack.Screen name="lesson/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="course/[id]" />
         <Stack.Screen name="challenge" />
+        <Stack.Screen name="business-quiz" />
         <Stack.Screen name="tasks" />
         <Stack.Screen name="community/index" />
         <Stack.Screen name="community/post/[id]" />
