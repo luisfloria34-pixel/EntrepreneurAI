@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -12,11 +12,9 @@ const FREE_COURSE_LIMIT = 2;
 
 export default function CoursesScreen() {
   const router = useRouter();
-  const { inProgress, available, loading, refetch } = useCourses();
-  const [isPro, setIsPro] = useState(true);
+  const { inProgress, available, courses, loading, refetch } = useCourses();
+  const { isPro } = usePurchases();
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => { getIsPro().then(setIsPro); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -38,6 +36,10 @@ export default function CoursesScreen() {
         </View>
       ) : (
         <>
+          <TouchableOpacity onPress={() => router.push('/business-quiz')} style={{ backgroundColor: '#102C40', padding: 20, borderRadius: 18, marginBottom: 18 }}>
+            <Text style={{ color: '#67E8F9', fontWeight: '900', fontSize: 19 }}>🚀 Business Academy</Text>
+            <Text style={{ color: '#E2E8F0', marginTop: 6 }}>Play 2-minute quizzes and master business skills →</Text>
+          </TouchableOpacity>
           {inProgress.length > 0 && (
             <>
               <SectionHeader title="In Progress" />
@@ -62,8 +64,9 @@ export default function CoursesScreen() {
             </View>
           ) : (
             available.map((course, i) => {
-              const locked = !isPro && i >= FREE_COURSE_LIMIT;
-              const isFree = !isPro && i < FREE_COURSE_LIMIT;
+              const originalIndex = courses.findIndex(c => c.id === course.id);
+              const locked = !isPro && originalIndex >= FREE_COURSE_LIMIT;
+              const isFree = !isPro && originalIndex < FREE_COURSE_LIMIT;
               return (
                 <CourseCard
                   key={course.id}
