@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { Alert } from 'react-native';
+import { useAuth } from './AuthContext';
 import { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import {
@@ -34,13 +35,20 @@ interface PurchasesContextType {
 const PurchasesContext = createContext<PurchasesContextType | undefined>(undefined);
 
 export function PurchasesProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isPro = customerInfo ? checkEntitlement(customerInfo) : false;
+  const isPro = !!user && !!customerInfo && checkEntitlement(customerInfo);
 
   const refresh = useCallback(async () => {
+    if (authLoading) return;
+    if (!user) {
+      setCustomerInfo(null);
+      setLoading(false);
+      return;
+    }
     try {
       const [info, off] = await Promise.all([getCustomerInfo(), getOfferings()]);
       setCustomerInfo(info);
@@ -50,7 +58,7 @@ export function PurchasesProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, authLoading]);
 
   useEffect(() => {
     refresh();
