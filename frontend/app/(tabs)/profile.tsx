@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../../src/services/supabase';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -19,6 +20,16 @@ export default function ProfileScreen() {
   const { profile, loading: profileLoading } = useProfile();
   const { proofs, loading: proofsLoading } = useProofs();
   const { badges, earnedCount, loading: badgesLoading } = useBadges();
+  const [completedCounts, setCompletedCounts] = useState({ lessons: 0, tasks: 0 });
+  useEffect(() => {
+    if (!user) { setCompletedCounts({ lessons: 0, tasks: 0 }); return; }
+    let active = true;
+    Promise.all([
+      supabase.from('lesson_progress').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('daily_tasks').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('completed', true),
+    ]).then(([lessons, tasks]) => { if (active) setCompletedCounts({ lessons: lessons.count ?? 0, tasks: tasks.count ?? 0 }); });
+    return () => { active = false; };
+  }, [user?.id]);
 
   const name = profile?.name ?? user?.email?.split('@')[0] ?? 'User';
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -108,8 +119,8 @@ export default function ProfileScreen() {
           <StatCard value={hustleScore} label="Hustle Score" icon="flash" color={colors.accent.primary} />
           <StatCard value={streak} label="Day Streak" icon="flame" color={colors.semantic.warning} />
           <StatCard value={level} label="Level" icon="ribbon" color={colors.semantic.purple} />
-          <StatCard value={0} label="Lessons Done" icon="book" color={colors.semantic.success} />
-          <StatCard value={0} label="Tasks Done" icon="checkmark-circle" color={colors.semantic.info} />
+          <StatCard value={completedCounts.lessons} label="Lessons Done" icon="book" color={colors.semantic.success} />
+          <StatCard value={completedCounts.tasks} label="Tasks Done" icon="checkmark-circle" color={colors.semantic.info} />
           <StatCard value={proofs.length} label="Proofs" icon="camera" color="#EC4899" />
         </View>
       </View>
